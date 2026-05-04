@@ -1,0 +1,154 @@
+---
+title: "Hydric Physiology"
+author: "StellaRaymond"
+date: "2026-05-04"
+output: html_document
+---
+
+```{r library-and-datasheets}
+#| echo: False #Added to prevent the printing of excess code
+#| warning: False #Added to prevent the printing of excess code
+#| message: false
+
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+
+Hydric_Pggplot2Hydric_Phys <- read_xlsx("Hydric_Physiology.xlsx")
+CEWL_Data <- read_xlsx("CEWL_Values.xlsx")
+```
+
+```{r checking-cewl}
+#Check to see if they are all within their own mean or beyond
+CEWL_Data |> 
+  group_by(Indiv_Lizard) |> 
+  mutate(IDMean = mean(`TEWL [g/(m2h)]`),
+         IDSD   = sd(`TEWL [g/(m2h)]`),
+         In2SD = (`TEWL [g/(m2h)]` >= IDMean - 2 * IDSD) &
+           (`TEWL [g/(m2h)]` <= IDMean + 2 * IDSD)) |> 
+  ungroup() |> 
+  summarize(Within2SD = sum(In2SD, na.rm = TRUE),
+            Outside2SD = sum(!In2SD, na.rm = TRUE)) 
+#average CEWL values & find cv
+CEWL_Average <- CEWL_Data |> 
+  group_by(Indiv_Lizard) |> 
+  mutate(CEWL = mean(`TEWL [g/(m2h)]`),
+         CEWL_cv = sd(`TEWL [g/(m2h)]`, na.rm = TRUE) 
+         /mean(`TEWL [g/(m2h)]`, na.rm = TRUE) * 100) |>
+  summarize(
+    across(
+      c(`AmbT [C]`,	`AmbRH [%]`, CEWL, CEWL_cv),
+      mean, .names = "{.col}_mean"), .groups = "drop")
+```
+
+```{r join the data}
+Lizard_Data_All <- Hydric_Phys |> 
+  full_join(CEWL_Average,
+            by = "Indiv_Lizard") |> 
+  mutate(SexGravid = paste(Sex, `Gravid?`, sep = "_"),
+         Es = 0.611 * exp((17.502*`AmbT [C]_mean`)/(`AmbT [C]_mean`+240.97)),
+         Lab_VPD = Es - (Es*(`AmbRH [%]_mean`/100))) |> 
+  select(!Es) |> 
+  filter(!Sex == "J") |> 
+  mutate(Campus = dplyr::recode(Campus,
+                                "SCR" = "Scripps",
+                                "CSM" = "CSUSM"),
+         LizardID = str_replace(LizardID, "_0", "_")) |> 
+  dplyr::rename(Posm_mean = Avg_Posm)
+
+Lizard_Data_All$SiteSeason <- interaction(Lizard_Data_All$Site, Lizard_Data_All$Season)
+
+```
+
+
+```{r filter the data}
+CEWL_outliers <- Lizard_Data_All |>
+  group_by(Site, Season) |>
+  mutate(Q1 = quantile(CEWL_mean, 0.25, na.rm = TRUE), 
+         Q3 = quantile(CEWL_mean, 0.75, na.rm = TRUE),
+         IQR = Q3 - Q1,
+         outlier = CEWL_mean < (Q1 - 1.5 * IQR) |
+                   CEWL_mean > (Q3 + 1.5 * IQR)) |> 
+  ungroup()
+
+CEWL_outliers |> 
+  filter(outlier) |>
+  select(LizardID, Site, Season, CEWL_mean)
+
+ggplot(CEWL_outliers, aes(x = Season, y = CEWL_mean, color = Site)) +
+  geom_boxplot() +
+  geom_point(data = subset(CEWL_outliers, outlier == TRUE), color = "red")
+
+```
+
+
+```{r filter the data}
+Posm_outliers <- Lizard_Data_All |>
+  group_by(Site, Season) |>
+  mutate(Q1 = quantile(Posm_mean, 0.25, na.rm = TRUE), 
+         Q3 = quantile(Posm_mean, 0.75, na.rm = TRUE),
+         IQR = Q3 - Q1,
+         outlier = Posm_mean < (Q1 - 1.5 * IQR) |
+                   Posm_mean > (Q3 + 1.5 * IQR)) |>
+  ungroup()
+
+Posm_outliers |> 
+  filter(outlier) |>
+  select(LizardID, Site, Season, Hematocrit)
+
+# ggplot(Posm_outliers, aes(x = Season, y = Posm_mean, color = Site)) +
+#   geom_boxplot() +
+#   geom_point(data = subset(Posm_outliers, outlier == TRUE), color = "red")
+```
+
+```{r filter the data}
+hematocrit_outliers <- Lizard_Data_All |>
+  group_by(Site, Season) |>
+  mutate(Q1 = quantile(Hematocrit, 0.25, na.rm = TRUE), 
+         Q3 = quantile(Hematocrit, 0.75, na.rm = TRUE),
+         IQR = Q3 - Q1,
+         outlier = Hematocrit < (Q1 - 1.5 * IQR) | Hematocrit > (Q3 + 1.5 * IQR)) |>
+  ungroup()
+
+hematocrit_outliers |> 
+  filter(outlier) |>
+  select(LizardID, Site, Season, Hematocrit)
+
+# ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
+#   geom_boxplot() +
+#   geom_point(data = subset(hematocrit_outliers, outlier == TRUE), color = "red")
+```
+
+
+```{r filter}
+#Filtering exreme outliers for CEWL
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CLU_ON_3", "CEWL_mean"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_27", "CEWL_mean"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_3", "CEWL_mean"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_20", "CEWL_mean"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "PEPP_OFF_23", "CEWL_mean"] <- NA
+
+#Filter extreme outliers CSUSB_ON_1
+Lizard_Data_All[Lizard_Data_All$LizardID == "CP_ON_22", "Avg_Posm"] <- NA
+
+#filtering outliers for Hematocrit
+Lizard_Data_All[Lizard_Data_All$LizardID == "CSUSB_ON_17", "Hematocrit"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "SCR_ON_17", "Hematocrit"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_30", "Hematocrit"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_15", "Hematocrit"] <- NA
+```
+
+
+```{r sample sizes}
+Table_of_Lizards <- Lizard_Data_All |> 
+  mutate(Site = if_else(Site =="ON", "Urban", "Non Urban")) |> 
+  group_by(Campus, Site, Season) |> 
+  count() 
+```
+
+
+
+
+
+
+
