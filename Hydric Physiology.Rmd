@@ -2,7 +2,7 @@
 title: "Hydric Physiology"
 author: "StellaRaymond"
 date: "2026-05-04"
-output: html_document
+output: pdf_document
 ---
 
 ```{r library-and-datasheets}
@@ -13,8 +13,11 @@ output: html_document
 library(tidyverse)
 library(readxl)
 library(ggplot2)
+library(lmerTest)
+library(ggeffects)
+library(emmeans)
 
-Hydric_Pggplot2Hydric_Phys <- read_xlsx("Hydric_Physiology.xlsx")
+Hydric_Phys <- read_xlsx("Hydric_Physiology.xlsx")
 CEWL_Data <- read_xlsx("CEWL_Values.xlsx")
 ```
 
@@ -61,7 +64,7 @@ Lizard_Data_All$SiteSeason <- interaction(Lizard_Data_All$Site, Lizard_Data_All$
 ```
 
 
-```{r filter the data}
+```{r filter data cewl}
 CEWL_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(CEWL_mean, 0.25, na.rm = TRUE), 
@@ -82,7 +85,7 @@ ggplot(CEWL_outliers, aes(x = Season, y = CEWL_mean, color = Site)) +
 ```
 
 
-```{r filter the data}
+```{r filter data posm}
 Posm_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(Posm_mean, 0.25, na.rm = TRUE), 
@@ -94,14 +97,14 @@ Posm_outliers <- Lizard_Data_All |>
 
 Posm_outliers |> 
   filter(outlier) |>
-  select(LizardID, Site, Season, Hematocrit)
+  select(LizardID, Site, Season, Posm_mean)
 
-# ggplot(Posm_outliers, aes(x = Season, y = Posm_mean, color = Site)) +
-#   geom_boxplot() +
-#   geom_point(data = subset(Posm_outliers, outlier == TRUE), color = "red")
+ggplot(Posm_outliers, aes(x = Season, y = Posm_mean, color = Site)) +
+  geom_boxplot() +
+  geom_point(data = subset(Posm_outliers, outlier == TRUE), color = "red")
 ```
 
-```{r filter the data}
+```{r filter data hemato}
 hematocrit_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(Hematocrit, 0.25, na.rm = TRUE), 
@@ -114,39 +117,201 @@ hematocrit_outliers |>
   filter(outlier) |>
   select(LizardID, Site, Season, Hematocrit)
 
-# ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
-#   geom_boxplot() +
-#   geom_point(data = subset(hematocrit_outliers, outlier == TRUE), color = "red")
+ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
+  geom_boxplot() +
+  geom_point(data = subset(hematocrit_outliers, outlier == TRUE), color = "red")
 ```
 
-
+**The following outliers can be adjusted below**
 ```{r filter}
 #Filtering exreme outliers for CEWL
-# Lizard_Data_All[Lizard_Data_All$LizardID == "CLU_ON_3", "CEWL_mean"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_27", "CEWL_mean"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_3", "CEWL_mean"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_20", "CEWL_mean"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "PEPP_OFF_23", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_27"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_26"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "HMC_OFF_12"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_OFF_16"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_OFF_26"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CLU_ON_3"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_3"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_20"
+#               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "PEPP_OFF_23"
+              & Lizard_Data_All$Season == "Fall", "CEWL_mean"] <- NA
 
-#Filter extreme outliers CSUSB_ON_1
-Lizard_Data_All[Lizard_Data_All$LizardID == "CP_ON_22", "Avg_Posm"] <- NA
+#Filter extreme outliers 
+Lizard_Data_All[Lizard_Data_All$LizardID == "CP_ON_22"
+              & Lizard_Data_All$Season == "Spring", "Posm_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CSUSB_ON_1"
+#               & Lizard_Data_All$Season == "Fall", "Posm_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SCR_OFF_2"
+#               & Lizard_Data_All$Season == "Fall", "Posm_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_5"
+#               & Lizard_Data_All$Season == "Fall", "Posm_mean"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_ON_5"
+#               & Lizard_Data_All$Season == "Fall", "Posm_mean"] <- NA
 
 #filtering outliers for Hematocrit
-Lizard_Data_All[Lizard_Data_All$LizardID == "CSUSB_ON_17", "Hematocrit"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "SCR_ON_17", "Hematocrit"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_30", "Hematocrit"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_15", "Hematocrit"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_15"
+              & Lizard_Data_All$Season == "", "Hematocrit"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "CSUSB_ON_17"
+#               & Lizard_Data_All$Season == "", "Hematocrit"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SCR_ON_17"
+#               & Lizard_Data_All$Season == "", "Hematocrit"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "SDSU_ON_30"
+#               & Lizard_Data_All$Season == "", "Hematocrit"] <- NA
+# Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_9" 
+#               & Lizard_Data_All$Season == "Fall", "Hematocrit"] <- NA
 ```
 
-
 ```{r sample sizes}
+#| echo: False
 Table_of_Lizards <- Lizard_Data_All |> 
   mutate(Site = if_else(Site =="ON", "Urban", "Non Urban")) |> 
   group_by(Campus, Site, Season) |> 
   count() 
 ```
 
+```{r read in SVL}
+SVL <- read_xlsx("Cool Lizards SVL.xlsx") |> 
+  select(!"...9") |> 
+  mutate(
+    `Liz ID` = str_replace_all(`Liz ID`, "on", "ON"),
+    `Liz ID` = str_replace_all(`Liz ID`, "off", "OFF"),
+    `Liz ID` = str_replace_all(`Liz ID`, " ", "")
+  ) |> 
+  filter(!`Liz ID` %in% c(
+    "CSUSB_ON_01_0003",   # replicate of Off_01, mislabeled
+    "CP_OFF_12_0001",     # crooked, use the other scan
+    "CSUSB_ON_06_0001",   # a replicate with a hand in the way
+    "UCLA_OFF_01_0002",   # dorsal replicate
+    "PEP_ON_51_0001"      # replicate
+  )) |> 
+  mutate(
+    `Liz ID` = str_remove(`Liz ID`, "_000[1234]$"),
+    `Liz ID` = str_replace(`Liz ID`, "_0([0-9]+)$", "_\\1"),
+    Site = str_extract(`Liz ID`, "ON|OFF"),
+    `Liz ID` = str_replace(`Liz ID`,"PEP(?!P)","PEPP"),
+    `Liz ID` = str_replace(`Liz ID`,"SC(?!R)","SCR")) |> 
+    #Campus = str_extract(`Liz ID`, "SDSU|CP|CLU|CSM|CSUSM|CSULB|CSUSB|HMC|PEPP|SCR|SC|UCLA|PEP|WC") originally used for combining datasheet & locating errors. Ignore this line
+  rename(LizardID = `Liz ID`) |> 
+  mutate(SiteSeason = interaction(Site, Season)) |> 
+  select(!c("SVL 1","SVL 2", "SVL3", "STDEV", "CV")) |> 
+  dplyr::rename(SVL = `Average`)
 
+Combined_Lizard <- left_join(Lizard_Data_All, SVL,
+                             by = c("LizardID","Site","Season", "SiteSeason"))
+  
+Pieg_Model <- lm(log(Mass) ~ log(SVL), data = Combined_Lizard, na.action = na.exclude)
+
+Lizard_Master <- Combined_Lizard |> 
+  mutate(Sion = Mass / SVL,
+         Pieg = log(Mass) - predict(Pieg_Model, newdata = Combined_Lizard),
+         Condition = residuals(Pieg_Model)) #this is the exact same as "Pieg", different format
+
+#Identify missing SVLs
+# Missing_SVL <- 
+#   anti_join(Lizard_Data_All, SVL,
+#                      by = c("LizardID","Site","Season")) |> 
+#   select(LizardID, Site, Season) 
+  #write_xlsx("Missing SVL.xlsx")
+```
+
+
+```{r run models}
+# Season*Site + Season*Condition + Site*Condition
+lmer_CEWL <- lmer(CEWL_mean ~ 
+                    #Season*Site + Season*Condition
+                    Season*Site*Condition 
+                  #3 way and Condition*Site have high p-values but it is good practice to keep in higher-order interactions if we expected there to be a trend
+                  + Lab_VPD + (1|Campus)  + Posm_mean + SexGravid 
+                  + Ecto_Presence 
+                  #variable that could be removed but would make sense to check for, even if not significant, it is good practice to keep & not change post hoc
+                  , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+anova(lmer_CEWL) 
+
+lmer_Posm <- lmer(Posm_mean ~ 
+                  Season*Site*Condition 
+                  #keep 3-way because it is only marginally non-significant and reveals 2-ways
+                  #Season*Site + Season*Condition + Site*Condition
+                  + SexGravid + (1|Campus)
+                  + Ecto_Presence
+                  #keeping ecto_presence, though not significant itself, reveals site*condition interaction
+                  ,
+                  data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
+anova(lmer_Posm)
+
+lmer_Hem <- lmer(Hematocrit ~ Season*Site*Condition 
+                 + SexGravid + (1|Campus) + Ecto_Presence,
+                 data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
+anova(lmer_Hem)
+```
+
+
+```{r graph cewl}
+#| warning: False
+#| note: False
+pred_cewl <- as.data.frame(emmeans(lmer_CEWL, ~ Season * Site))
+okabe_ito <- c(
+  "#E69F00", # orange
+  "#56B4E9") # blue
+#Cewl Model with background
+ggplot()+
+  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
+                                        color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
+                                        fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
+              width = .2, show.legend = F, shape = 21, size = 2) +
+  # scale_color_manual(
+  #   values = c("ON" = "grey65", 
+  #              "OFF" = "grey85")) +
+  # scale_color_identity()+
+  geom_line(data = pred_cewl, aes(x = Season, y = emmean, color = factor(Site), group = Site)) +
+  geom_errorbar(data = pred_cewl, aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), width = 0.075, size = 1) +
+  geom_point(data = pred_cewl, aes(x = Season, y = emmean, color = factor(Site), group = Site), size = 2) +
+  labs(y = expression("CEWL (g "* m^-2 / h^-1 *")"),
+       color = "Site") +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "On"  = "Urban",
+                       "Off" = "Non-urban")) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(), 
+    axis.line = element_line(color = "black"),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16))
+```
+
+
+
+
+```{r graph ggpredict}
+pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
+ggplot() +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
+             alpha = 0.25, size = 1.7) +
+  geom_ribbon(
+    data = pred_hemato, aes(x = x, ymin = conf.low, ymax = conf.high, fill = group),
+    alpha = 0.18, color = NA) +
+  geom_line(
+    data = pred_hemato, aes(x = x, y = predicted, color = group),
+    linewidth = 1.2) +
+  facet_wrap(~facet) +
+  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site", fill = "Site") +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14))
+```
 
 
 
