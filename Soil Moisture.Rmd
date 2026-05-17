@@ -1,0 +1,437 @@
+---
+title: "Soil Moisture"
+author: "StellaRaymond"
+date: "2026-05-16"
+output: pdf_document
+---
+
+```{r setup, warning = FALSE}
+#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+required_packages <-function(...) { 
+  libs<-unlist(list(...)) 
+  req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
+  need<-libs[req==FALSE] 
+  if(length(need)>0){ 
+    install.packages(need, repos = "http://cran.us.r-project.org") 
+    lapply(need, library, character.only=TRUE) 
+  }
+  else{message("No packages required installation.")} 
+}
+
+required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans")
+```
+
+
+```{r setup}
+SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "Cal Poly") |> 
+  full_join(read_xlsx(path = "Abiotics/CSUSM/CSUSM Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "CSUSM"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/Pepperdine/Pepperdine Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "Pepperdine"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/Scripps/Scripps Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "Scripps"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/Whittier/Whittier Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "Whittier"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/UCLA/UCLA Master.xlsx","SM",
+                     col_types = c("date", "numeric", "numeric", "numeric", "numeric")) |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "UCLA"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/CSUSB/CSUSB Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  #pivot_wider(names_from = Location, values_from = SM) |> 
+  mutate(Campus = "CSUSB"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/CLU/CLU Master.xlsx","SM") |>
+  pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+    separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  mutate(Campus = "CLU"),
+  by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  full_join(read_xlsx(path = "Abiotics/CSULB/CSULB Master.xlsx","SM") |>
+              pivot_longer(cols = -DateTime, 
+               names_to = "Site_Location", 
+               values_to = "SM") |>
+              separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+              mutate(Campus = "CSULB"),
+            by = c("DateTime", "Site", "SM", "Location", "Campus")) |> 
+  mutate(Month = month(DateTime, label = T, abbr = T),
+         Time = hms(format(DateTime, "%H:%M:%S"))) |> 
+  filter(!Month %in% c("Feb", "Oct", "Nov"))
+```
+
+
+```{r calibrate-filter-prepare}
+SM_All <- SM_All_PrecCalib |>
+  mutate(
+    SM = case_when(
+      Campus == "Cal Poly" & Site == "Off" & Location == "Shade"
+      ~ SM*0.7626512473	+ 0.1157975606,
+      Campus == "Cal Poly" & Site == "Off" & Location == "Sun" 
+      ~ SM*0.9208141931	+ 0.06409380004,
+      Campus == "Cal Poly" & Site == "On" & Location == "Shade"
+      ~ SM*0.927229213 + 0.1055328493,
+      Campus == "Cal Poly" & Site == "On" & Location == "Sun"
+      ~ SM*0.8714872975	+ 0.1059928176,
+      Campus == "CSUSB" & Site == "Off" & Location == "Shade"
+      ~ SM*1.147883049 - 0.07195710998,
+      Campus == "CSUSB" & Site == "Off" & Location == "Sun" 
+      & DateTime < ymd("2025-04-02")
+      ~ SM*0.9449593421 +	0.04963067249,
+      # Campus == "CSUSB" & Site == "On" & Location == "Shade"
+      # ~ SM*1.054337754 - 0.04200089063,
+  #I have reason to believe this calibration may be invalid and thus it was commented out
+      # Campus == "CSUSB" & Site == "On" & Location == "Sun" 
+      # ~ SM*1.063970956 - 0.05517880129,
+      Campus == "UCLA" & Site == "Off" & Location == "Shade"
+      ~ SM*1.00754774	- 0.004184319254,
+      Campus == "UCLA" & Site == "Off" & Location == "Sun"
+      ~ SM*1.127664165 - 0.05965336487,
+  #I have reason to believe this calibration may be invalid and thus it was commented out
+      # Campus == "UCLA" & Site == "On" & Location == "Shade"
+      # ~ SM*(1.794141579) - 0.1880992677,
+      #No On_Sun calibration because the logger was destroyed
+      Campus == "Whittier" & Site == "Off" & Location == "Shade"
+      ~ SM*1.294021546 - 0.1041101845,
+      Campus == "Whittier" & Site == "Off" & Location == "Sun"
+      ~ SM*1.089305032 - 0.04532633929,
+  #I have reason to believe this calibration may be invalid and thus it was commented out
+      # Campus == "Whittier" & Site == "On" & Location == "Shade"
+      # ~ SM*1.284492549 - 0.1269630441, 
+      Campus == "Whittier" & Site == "On" & Location == "Sun"
+      ~ SM*1.209386722 - 0.0831184615,
+      Campus == "Scripps" & Site == "Off" & Location == "Shade"
+      ~ SM*1.11785729	- 0.04209083718,
+      Campus == "Scripps" & Site == "Off" & Location == "Sun"
+      ~ SM*1.222856632 - 0.08809597617,
+      Campus == "Scripps" & Site == "On" & Location == "Shade"
+      ~ SM*1.063832017 - 0.02247110766,
+      Campus == "Scripps" & Site == "On" & Location == "Sun" 
+      ~ SM*1.180382915 - 0.05355395931,
+      Campus == "Pepperdine" & Site == "Off" & Location == "Shade"
+      ~ SM*1.033528382 - 0.01518944759,
+      Campus == "Pepperdine" & Site == "Off" & Location == "Sun"
+      ~ SM*0.9345619796 - 0.02029910189,
+      Campus == "Pepperdine" & Site == "On" & Location == "Shade"
+      ~ SM*0.9942100727	+ 0.01308747899,
+      Campus == "Pepperdine" & Site == "On" & Location == "Sun" 
+      ~ SM*1.119365525 - 0.0598695355,
+      Campus == "CLU" & Site == "Off" & Location == "Shade"
+      ~ SM*0.8026575529	+ 0.09798414304,
+      Campus == "CLU" & Site == "Off" & Location == "Sun"
+      ~ SM*0.8284017489	+ 0.08671550135,
+      Campus == "CLU" & Site == "On" & Location == "Shade"
+      ~ SM*0.7075278588	+ 0.1050748847,
+      Campus == "CLU" & Site == "On" & Location == "Sun" 
+      ~ SM*0.7596081387	+ 0.1262780708,
+      #No Off_Sun for CSULB because it was chewed through early on
+      Campus == "CSULB" & Site == "Off" & Location == "Sun"
+      ~ SM*1.050806961 - 0.04829162008,
+      Campus == "CSULB" & Site == "On" & Location == "Shade"
+      ~ SM*1.455172923 - 0.1876963955,
+      Campus == "CSULB" & Site == "On" & Location == "Sun" 
+      ~ SM*1.181175115 - 0.07712122048,
+      TRUE ~ SM
+    )) |> 
+  filter(!(Campus == "Pepperdine" & Site == "On" & Location == "Sun" & 
+           DateTime > as.POSIXct("2025-09-12 08:00:00", tz = "UTC")),
+        #!(Campus == "Whittier" & Site == "On" & Location == "Shade" & DateTime > as.POSIXct("2025-04-14 06:00:00") & DateTime < as.POSIXct("2025-04-26 03:00:00"))
+         !(Campus =="Whittier" & Site == "On" & Location == "Sun" & DateTime > as.POSIXct("2025-09-05 08:00:00") & DateTime < as.POSIXct("2025-09-09 00:00:00")))
+
+SM_HourlyAvgsLong <- SM_All |>
+  group_by(Time, Site, Campus, Month, Location) |>
+  summarize(
+    mean = mean(SM, na.rm = TRUE),
+    sd   = sd(SM, na.rm = TRUE),
+    n    = sum(!is.na(SM)),
+    se   = sd(SM, na.rm = TRUE) / sqrt(sum(!is.na(SM))),
+    cv   = sd(SM, na.rm = TRUE) / mean(SM, na.rm = TRUE) * 100,
+    .groups = "drop_last") |>
+  ungroup() |> 
+  filter(n >= 3)
+#!(Campus == "Cal Poly" & Month == "Mar")
+
+LM_SM_HourlyAvgsLong <- SM_HourlyAvgsLong |> 
+  mutate(Time = as.numeric(Time)/3600,
+         Site = factor(Site),
+         Campus = factor(Campus),
+         Location = factor(Location),
+         Month = factor(Month, levels = month.abb[3:9])) 
+```
+
+
+```{r timeline}
+SM_All |>
+  group_by(Campus) |>
+  summarize(
+    first_date = min(DateTime, na.rm = TRUE),
+    last_date  = max(DateTime, na.rm = TRUE))
+```
+
+```{r models}
+lm_SM_Sun <- lmer(mean ~ Site*Month +
+                            poly(Time,2) + 
+                            (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                  , 
+                  REML = FALSE,
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = filter(LM_SM_HourlyAvgsLong, 
+                                Location == "Sun"))
+
+lm_SM_Shade <- lmer(mean ~ Site*Month + poly(Time,2) + 
+                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                  , 
+                  REML = FALSE, 
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = filter(LM_SM_HourlyAvgsLong, 
+                                Location == "Shade"))
+
+anova(lm_SM_Sun)
+anova(lm_SM_Shade) 
+pairs(emmeans(lm_SM_Sun, specs = ~ Site))
+
+vif(lm_SM_Sun_2)
+AIC(lm_SM_Sun_2)
+plot(lm_SM_Sun_2)
+qqnorm(resid(lm_SM_Sun_2))
+
+#pairs(emmeans(lm_SM_Sun, specs = ~ Site|Campus))
+
+
+summary(lm_SM_Shade)
+#emmeans(lm_SM, specs = ~ Site|Month)
+ranef(lm_SM)$Campus
+
+
+plot(fitted(lm_SM_Sun), resid(lm_SM_Sun),
+     xlab = "Fitted values",
+     ylab = "Residuals")
+abline(h = 0, col = "red")
+
+residuals <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Sun") |> 
+  mutate(residuals = resid(lm_SM_Sun))
+```
+
+
+```{r graphs}
+okabe_ito <- c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+SM_Graph <- SM_HourlyAvgsLong |>
+  mutate(
+    Month_num = match(as.character(Month), month.abb),
+    Time_hr = time_length(Time, "hours"),
+    grey_color = if_else(Site == "On", "grey60", "grey75"))
+
+# Reference line: average across campuses
+# SM_Graph_Ref <- SM_Graph |>
+#   group_by(Site, Month, Time_hr) |>
+#   summarise(
+#     mean_ref = mean(mean, na.rm = TRUE),
+#     .groups = "drop") |> 
+#   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
+
+pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month * Time, 
+                       at = list(Time = seq(0, 23, by = .5))) |>
+  as.data.frame() |>
+  mutate(Time_hr = Time,
+         Site = factor(Site, levels = c("On", "Off")),
+         Location = "Sun")
+
+pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month * Time, 
+                       at = list(Time = seq(0, 23, by = .5))) |>
+  as.data.frame() |>
+  mutate(Time_hr = Time,
+         Site = factor(Site, levels = c("On", "Off")),
+         Location = "Shade")
+
+pred_SM <- pred_SM_Sun |> 
+  full_join(pred_SM_Shade, 
+            by = c("Site", "Month", "Time", "emmean", "SE", "df", "asymp.LCL", "asymp.UCL", "Time_hr", "Location")) |> 
+  mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
+  arrange(Location, Month, Site, Time)
+
+ggplot() +
+  # campuses (grey)
+  geom_line(data = SM_Graph,
+            aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_color, linetype = grey_color),
+            alpha = 0.6, linewidth = 1, show.legend = F) +
+  # geom_point(data = SM_Graph, 
+  #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
+  #            color = "grey70", alpha = 0.6) +
+  # reference line (campus-averaged)
+  geom_ribbon(data = pred_SM,
+              aes(x = Time, ymin = asymp.LCL, ymax = asymp.UCL, 
+                  fill = Site_color, group = Site
+              ), alpha = .25)+
+  scale_fill_identity(name = "Site",
+                      breaks = okabe_ito[c(2, 1)])+
+  geom_line(
+    data = pred_SM,
+    aes(x = Time, y = emmean, color = Site_color, group = interaction(Location, Month, Site)
+        #group = Site
+        ),
+    linewidth = 1.2) +
+  scale_color_identity(
+    name = "Site",
+    breaks = okabe_ito[c(2,1)],
+    labels = c("Urban", "Non-urban"),
+    guide = "legend") +
+  facet_grid(Location ~ Month) +
+  # scale_color_manual(values = okabe_ito[c(2,1)],
+  #                    breaks = c("On", "Off"),
+  #                    labels = c(
+  #                      "On"  = "Urban",
+  #                      "Off" = "Non-urban")) +
+  scale_x_continuous(
+    name = "Time of Day",
+    breaks = seq(2, 20, 6)) +
+  labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
+       color = "Site") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 14),
+        strip.text = element_text(size = 14),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18))
+```
+
+
+```{r other}
+#chat-provided fix
+mod_sun <- lmer(
+  mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
+  data = SM_model_dat |> filter(Location == "Sun"))
+
+mod_shade <- lmer(
+  mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
+  data = SM_model_dat |> filter(Location == "Shade"))
+
+SM_model_dat <- SM_HourlyAvgsLong |>
+  filter(Campus != "CSUSM") |>
+  mutate(
+    Time = as.numeric(Time)/360,
+    Month = factor(Month, levels = month.abb[3:9]),   # Mar-Sep
+    Site = factor(Site),
+    Location = factor(Location),
+    Campus = factor(Campus))
+
+pred_campus_sun <- expand_grid(
+  Time = sort(unique(SM_model_dat$Time)),
+  Site = levels(SM_model_dat$Site),
+  Month = levels(SM_model_dat$Month),
+  Campus = levels(SM_model_dat$Campus)) |>
+  mutate(
+    fit = predict(mod_sun, newdata = ., re.form = NULL),
+    Location = "Sun")
+pred_campus_shade <- expand_grid(
+  Time = sort(unique(SM_model_dat$Time)),
+  Site = levels(SM_model_dat$Site),
+  Month = levels(SM_model_dat$Month),
+  Campus = levels(SM_model_dat$Campus)) |>
+  mutate(
+    fit = predict(mod_shade, newdata = ., re.form = NULL),
+    Location = "Shade")
+pred_campus <- bind_rows(pred_campus_sun, pred_campus_shade)
+
+pred_ref_sun <- expand_grid(
+  Time = sort(unique(SM_model_dat$Time)),
+  Site = levels(SM_model_dat$Site),
+  Month = levels(SM_model_dat$Month)) |>
+  mutate(
+    fit = predict(mod_sun, newdata = ., re.form = NA),
+    Location = "Sun")
+pred_ref_shade <- expand_grid(
+  Time = sort(unique(SM_model_dat$Time)),
+  Site = levels(SM_model_dat$Site),
+  Month = levels(SM_model_dat$Month)) |>
+  mutate(
+    fit = predict(mod_shade, newdata = ., re.form = NA),
+    Location = "Shade")
+pred_ref <- bind_rows(pred_ref_sun, pred_ref_shade)
+
+ggplot() +
+  geom_line(
+    data = pred_campus |> filter(Site == "On"),
+    aes(x = Time, y = fit, group = Campus),
+    color = "grey60",
+    linewidth = 1,
+    alpha = 0.6,
+    show.legend = FALSE) +
+  geom_line(
+    data = pred_campus |> filter(Site == "Off"),
+    aes(x = Time, y = fit, group = Campus),
+    color = "grey75",
+    linewidth = 1,
+    alpha = 0.6,
+    linetype = "dashed",
+    show.legend = FALSE) +
+  geom_line(
+    data = pred_ref,
+    aes(x = Time, y = fit, color = Site),
+    linewidth = 1.4) +
+  facet_grid(Location ~ Month) +
+  scale_color_manual(
+    name = "Site",
+    values = c(
+      "On" = okabe_ito[2],
+      "Off" = okabe_ito[1]),
+    labels = c(
+      "On" = "Urban",
+      "Off" = "Non-urban")) +
+  scale_x_continuous(
+    name = "Time of Day",
+    breaks = seq(0, 240, 60),
+    labels = c("0", "6", "12", "18", "24")) +
+  labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")")) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18))
+
+```
+
