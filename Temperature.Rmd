@@ -1,0 +1,416 @@
+---
+title: "Temperature"
+author: "StellaRaymond"
+date: "2026-05-17"
+output: pdf_document
+---
+
+```{r library, include = FALSE}
+#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+required_packages <-function(...) { 
+  libs<-unlist(list(...)) 
+  req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
+  need<-libs[req==FALSE] 
+  if(length(need)>0){ 
+    install.packages(need, repos = "http://cran.us.r-project.org") 
+    lapply(need, library, character.only=TRUE) 
+  }
+  else{message("No packages required installation.")} 
+}
+
+required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans")
+```
+
+```{r load, include = FALSE}
+Prelim_Stat_Longest <- read_xlsx(
+  path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","Temp",
+  col_types = c(
+    "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+  select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+  pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+  separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+  mutate(Campus = "Cal Poly") |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/CSUSM/CSUSM Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "CSUSM"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/Pepperdine/Pepperdine Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "Pepperdine"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/Scripps/Scripps Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "Scripps"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/Whittier/Whittier Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "Whittier"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/UCLA/UCLA Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "UCLA"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/CSUSB/CSUSB Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))|>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "CSUSB"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/CSULB/CSULB Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "CSULB"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/CLU/CLU Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "CLU"), by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/SDSU/SDSU Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "SDSU"), by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  full_join(
+    read_xlsx(
+      path = "Abiotics/Harvey Mudd/HMC Master.xlsx","Temp",
+      col_types = c(
+        "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))|>
+      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
+      separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
+      mutate(Campus = "HMC"), 
+    by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
+  mutate(Location = dplyr::recode(Location, "Amb" = "Ambient"), #Cannot be done after one of the lmer packages (car) because it overrides recode.
+         Time = format(DateTime, "%H:%M:%S"),
+         #Time = hms(format(DateTime, "%H:%M:%S")),
+         MonthDayYear = format(DateTime, "%D"),
+         MonthDayYear = mdy(MonthDayYear))
+```
+
+```{r filter}
+#Removing all data with errors
+Prelim_Stat_Longest_Filtered <- Prelim_Stat_Longest |> 
+  mutate(Time = hms(Time),
+         Time_sec = hour(Time) * 3600 + minute(Time) * 60 + second(Time)) |> 
+  filter(
+  #Removal of all of CLU's Off_Sun because it was chewed through and unreliable
+    !(Campus == "CLU" & Location == "Sun" & Site == "Off"),
+  #Removal of all of CSUSM's Ambient because Ambient appeared to be completely sunned
+    !(Campus == "CSUSM" & Location == "Ambient"),
+  #Known Sunning of Whittier's On_Shade
+  !(Campus == "Whittier" & Location == c("Shade","Ambient") & Site == "On" &
+      DateTime >= ymd_hms("2025-06-01 00:00:00") &
+      DateTime <= ymd_hms("2025-08-07 19:00:00")),    
+  #More known sunning of shade logger only
+  !(Campus == "Whittier" & Location == c("Shade","Ambient") & Site == "On" &
+      DateTime >= ymd_hms("2025-09-11 12:30:00")),
+    #All other data filtering
+  #Little misc. dips in UCLA
+    !(Campus == "UCLA" & Site == "Off" & Location == "Sun" & MonthDayYear == mdy("05-18-2025") & Time == hms("14:00:00")),
+    !(Campus == "UCLA" & Site == "Off" & Location == "Sun" & MonthDayYear == mdy("05-18-2025") & Time == hms("15:00:00")),
+    !(Campus == "UCLA" & Site == "Off" & Location == "Sun" & MonthDayYear == mdy("05-16-2025") & Time == hms("14:00:00")),
+    !(Campus == "UCLA" & Site == "Off" & Location == "Sun" & MonthDayYear == mdy("05-16-2025") & Time == hms("15:00:00")),
+    !(Campus == "UCLA" & Site == "On" & Location == "Sun" &
+        DateTime >= ymd_hms("2025-05-16 12:30:00") &
+        DateTime <= ymd_hms("2025-05-16 14:00:00")),
+    !(Campus == "UCLA" & Site == "On" & Location == "Sun" &
+        DateTime >= ymd_hms("2025-05-28 08:30:00") &
+        DateTime <= ymd_hms("2025-05-28 17:30:00")),
+    !(Campus == "UCLA" & Site == "On" & Location == "Sun" & between(MonthDayYear, mdy("05-07-2025"), mdy("07-14-2025")) & between(Time, hms("09:00:00"), hms("18:00:00"))),
+    #CSULB Shaded sun loggers (Off showed no signs of cloudiness)
+    !(Campus == "CSULB" & Site == "On" & Location == "Sun" & between(MonthDayYear, mdy("05-24-2025"), mdy("05-27-2025")) & between(Time, hms("08:00:00"), hms("20:00:00"))),
+    !(Campus == "CSULB" & Site == "On" & Location == "Sun" & DateTime >= mdy_hms("05-23-2025 13:30:00") & DateTime <= mdy_hms("05-23-2025 16:30:00")),
+    !(Campus == "CSULB" & Site == "Off" & Location == "Shade" & DateTime >= mdy_hms("03-05-2025 11:00:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
+    !(Campus == "CSULB" & Site == "Off" & Location == "Ambient" & DateTime >= mdy_hms("03-05-2025 12:30:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
+    !(Campus == "CSULB" & Site == "Off" & Location == "Shade" & DateTime >= mdy_hms("03-06-2025 13:00:00") & DateTime <= mdy_hms("03-06-2025 18:00:00")),
+    !(Campus == "CSULB" & Site == "Off" & Location == "Ambient" & DateTime >= mdy_hms("03-06-2025 13:00:00") & DateTime <= mdy_hms("03-06-2025 18:00:00")),
+    #Miscellaneous removals
+    #Scripps shade sunning
+  #Off_Shade nearly reaches sun temp, over 1/2 way between Amb & sun
+    !(Campus == "Scripps" & Site == "Off" & Location == "Shade" &
+        DateTime >= ymd_hms("2025-06-20 08:00:00") &
+        DateTime <= ymd_hms("2025-07-08 20:00:00")),
+    !(Campus == "Scripps" & Site == "Off" & Location == "Shade" &
+        DateTime >= ymd_hms("2025-08-03 08:00:00") &
+        DateTime <= ymd_hms("2025-08-23 08:00:00")),
+    !(Campus == "Cal Poly" & Location == "Sun" &
+        MonthDayYear == mdy("03/12/2025") & 
+        hms("08:00:00") < Time & Time < hms("20:00:00")),
+    !(Campus == "Cal Poly" & Site == "Off" &
+        DateTime >= ymd_hms("2025-03-10 20:00:00") &
+        DateTime <= ymd_hms("2025-03-11 07:00:00")),
+    !(Campus == "Cal Poly" & Location == "Sun" & Site == "On" &
+        MonthDayYear == mdy("07/01/2025") & 
+        hms("08:00:00") < Time & Time < hms("20:00:00")),
+  #Should already be filtered above, not sure why I re-filtered
+    !(Campus == "Whittier" & Site == "On" & Location == "Shade" & between(MonthDayYear, mdy("06-01-2025"), mdy("08-08-2025")) & between(Time_sec, 15.5*3600, 18*3600))
+    )
+```
+
+```{r set up}
+Prelim_Stat_All <- 
+  Prelim_Stat_Longest_Filtered |> 
+  pivot_wider(names_from = Location,
+              values_from = Temperature) |> 
+  filter(!if_all(everything(), is.na)) |> 
+  mutate(Time = hms(format(DateTime, "%H:%M:%S")),
+         MonthDayYear = mdy(format(DateTime, "%D")),
+         Month = month(MonthDayYear, label = T, abbr = T),
+         Season = case_when(
+           MonthDayYear >= mdy("12-21-2024") & MonthDayYear < mdy("03-20-2025") ~ "Winter",
+           MonthDayYear >= mdy("03-20-2025") & MonthDayYear < mdy("06-21-2025") ~ "Spring",
+           MonthDayYear >= mdy("06-21-2025") & MonthDayYear < mdy("09-22-2025") ~ "Summer",
+           MonthDayYear >= mdy("09-22-2025") & MonthDayYear < mdy("12-21-2025") ~ "Fall",
+           TRUE ~ "Winter"
+         )) |>
+  #rename(Ambient = Amb) |> 
+  filter(!Month %in% c("Feb", "Oct", "Nov"))
+
+Prelim_Stat_HourlyAvgsLong <- Prelim_Stat_All |>
+  #filter(Time >= hms("20:00:00") | Time <= hms("06:30:00")) |>
+  filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
+  pivot_longer(cols = c(Ambient, Sun, Shade), names_to = "Location", values_to = "Temperature") |> 
+  group_by(Time, Site, Campus, Month, Location) |>
+  summarize(
+    mean = mean(Temperature, na.rm = TRUE),
+    sd   = sd(Temperature, na.rm = TRUE),
+    n    = sum(!is.na(Temperature)),
+    se   = sd(Temperature, na.rm = TRUE) / sqrt(sum(!is.na(Temperature))),
+    cv   = sd(Temperature, na.rm = TRUE) / mean(Temperature, na.rm = TRUE) * 100,
+    .groups = "drop_last") |>
+  ungroup() |> 
+  filter(n >= 3,
+         #!(Campus == "Cal Poly" & Month == "Mar")
+  )
+
+#From factor to numeric, prep for lmer (not just graphs)
+Prelim_Stat_HourlyAvgs_lmer <- Prelim_Stat_HourlyAvgsLong |>
+  filter(!is.na(mean)) |> 
+  mutate(Time = as.numeric(#hms(
+    Time#)
+                           )/3600, 
+         Site = as.factor(Site), 
+         Campus = as.factor(Campus),
+    Month = as.factor(Month))
+```
+
+
+```{r models}
+#sun mean & cv
+HourlyAvgs_lmer_SunMean <- lmer(log(mean) ~ Site*Month + poly(Time,4) +
+                                (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Sun"))
+HourlyAvgs_lmer_SunCV <- lmer(log(cv)~Site*Month+poly(Time,4)+
+                                (1|Campus) + #(1|Site:Campus) +
+                                (1|Month:Site:Campus),
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Sun"))
+#shade mean & cv
+HourlyAvgs_lmer_ShadeMean <- lmer(log(mean) ~ Site*Month + poly(Time,4) +
+                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Shade"))
+HourlyAvgs_lmer_ShadeCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
+                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Shade"))
+#ambient mean & cv
+HourlyAvgs_lmer_AmbMean <- lmer(log(mean) ~ Site*Month + poly(Time,4) +
+                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Ambient",
+                                      !Campus == "CSUSM"))
+HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
+                                (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
+                        data = filter(Prelim_Stat_HourlyAvgs_lmer,
+                                      Location == "Ambient",
+                                      !Campus == "CSUSM"))
+```
+
+
+```{r anova}
+anova(HourlyAvgs_lmer_ShadeMean)
+pairs(emmeans(HourlyAvgs_lmer_AmbMean, specs = ~ Site|Month, adjust = "sidak"))
+#ranef(HourlyAvgs_lmer)
+
+qqnorm(resid(HourlyAvgs_lmer_SunMean))
+qqline(resid(HourlyAvgs_lmer_SunMean))
+hist(resid(HourlyAvgs_lmer_SunMean))
+#check_collinearity(HourlyAvgs_lmer)
+check_model(HourlyAvgs_lmer_SunMean)
+DHARMa::checkModel(HourlyAvgs_lmer_SunMean)
+
+
+# plot(simulateResiduals(fittedModel = HourlyAvgs_lmer, plot = F))
+# qqplot(your_data, rnorm(length(your_data)))
+
+pairs(emmeans(HourlyAvgs_lmer, specs = ~ Site))
+ranef(HourlyAvgs_lmer)
+#contrasts(HourlyAvgs_lmer)
+```
+
+
+```{r anova}
+#Return to the time piece
+HourlyAvgs_lmer <- lmer(
+  Shade_mean ~  Site + Month + Site*Month + (1|Time) + (1|Campus),
+  data = mutate(filter(
+    Prelim_Stat_HourlyAvgsWide,
+    Shade_n > 0),
+    Time = factor(as.character(Time))), REML = F)
+
+
+ggplot(
+  filter(
+    mutate(
+      Prelim_Stat_HourlyAvgsLong, 
+      Month_num = match(as.character(Month), month.abb),
+      Time = as.numeric(Time)), Location == "Sun", Month == "Jun"),
+  aes(x = Time, y = mean, color = Campus, group = interaction(Campus, Site), shape= Site)) +
+  facet_grid(vars(Month)) +
+  geom_point() +
+  geom_line()
+
+
+okabe_ito <- c(
+  "#E69F00", # orange
+  "#56B4E9", # sky blue
+  "#009E73", # bluish green
+  "#F0E442", # yellow
+  "#0072B2", # blue
+  "#D55E00", # vermillion
+  "#CC79A7"  # reddish purple
+)
+
+
+library(ggeffects)
+
+predictors <- ggpredict(HourlyAvgs_lmer_SunMean, terms = c("Time [all]", "Site", "Month"))
+model_data <- as.data.frame(predictors)
+ggplot(model_data, aes(x = x, y = predicted, color = group)) +
+  geom_smooth() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.1, linewidth = .5) +
+  facet_wrap(~ facet)
+
+
+Temp_Graph <- Prelim_Stat_HourlyAvgsLong |>
+  filter(
+    #Location == "Ambient",
+     !Campus == "CSUSM", #& Location == "Ambient", 
+     !(Campus == "UCLA" & Site == "On" & Location == "Sun")) |>
+  mutate(
+    Month_num = match(as.character(Month), month.abb),
+    Time_hr = time_length(Time, "hours"),
+    grey_site = if_else(Site == "On", "grey50", "grey75"))
+
+# Reference line: average across campuses
+Temp_Graph_Ref <- Temp_Graph |>
+  group_by(Site, Location, Month, Time_hr) |>
+  summarise(
+    mean_ref = mean(mean, na.rm = TRUE),
+    .groups = "drop") |>
+  mutate(color_site = if_else(
+    Site == "On", okabe_ito[1], okabe_ito[2]))
+# HourlyAvgs_lmer_vis <- lmer(
+#   mean ~ Site * Month + Site * Time + (1|Campus),
+#   data = filter(Prelim_Stat_HourlyAvgs_lmer, Location == "Shade"))
+# Temp_Graph_emm_Ref <- emmeans(
+#   HourlyAvgs_lmer_vis,
+#   ~ Site | Month + Time
+# ) |>
+#   as.data.frame() |>
+#   mutate(Time_hr = time_length(Time, "hours"))
+ggplot() +
+  # campuses (grey)
+  geom_line(data = Temp_Graph,
+  aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_site), alpha = 0.6, na.rm = T, linewidth = .5) +
+  scale_color_identity(
+    name = "Site",
+    breaks = okabe_ito[c(1,2)],
+    labels = c("Non-urban", "Urban"),
+    guide = "legend") +
+  # geom_smooth(data = Temp_Graph,
+  #             se = F,
+  #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
+  #   color = "grey70", alpha = 0.6) +
+  # geom_line(
+  #   data = Temp_Graph_emm_Ref,
+  #   aes(x = Time_hr, y = emmean, color = Site,
+  #       group = interaction(Site, Month)),
+  #   linewidth = 1.4) +
+  geom_line(
+    data = Temp_Graph_Ref,
+    aes(x = Time_hr, y = mean_ref, color = color_site),
+    linewidth = 1.2) +
+  # geom_line(
+  #   data = Temp_Graph_Ref,
+  #   aes(x = Time_hr, y = mean_ref, color = Site),
+  #   linewidth = 1.2) +
+  #facet_grid(cols = vars(Month)) +
+  facet_grid(Location ~ Month, scales = "free_y") +
+  # scale_color_manual(values = okabe_ito[c(1,2)],
+  #                   labels = c("On"  = "Urban", "Off" = "Non-urban")) +
+  scale_x_continuous(
+    name = "Time of Day",
+    breaks = seq(6, 18, 4)) +
+  labs(y = "Temperature (Cº)",
+       color = "Site") +
+  theme_bw()+
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 14),
+        strip.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18)
+```
+
+
