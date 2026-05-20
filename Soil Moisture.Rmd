@@ -23,6 +23,9 @@ required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans")
 
 
 ```{r setup}
+#for VPD later
+Temp_All <- read_xlsx("Prelim Stat All 2026.xlsx")
+#Soil Moisture
 SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","SM") |>
   pivot_longer(cols = -DateTime, 
                names_to = "Site_Location", 
@@ -206,6 +209,7 @@ SM_All |>
     last_date  = max(DateTime, na.rm = TRUE))
 ```
 
+##SM Models
 ```{r models}
 lm_SM_Sun <- lmer(mean ~ Site*Month +
                             poly(Time,2) + 
@@ -227,7 +231,9 @@ lm_SM_Shade <- lmer(mean ~ Site*Month + poly(Time,2) +
 anova(lm_SM_Sun)
 anova(lm_SM_Shade) 
 pairs(emmeans(lm_SM_Sun, specs = ~ Site))
+```
 
+```{r more-models}
 vif(lm_SM_Sun_2)
 AIC(lm_SM_Sun_2)
 plot(lm_SM_Sun_2)
@@ -250,6 +256,21 @@ residuals <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun") |> 
   mutate(residuals = resid(lm_SM_Sun))
 ```
+
+##VPD Models
+```{r combine}
+
+Temp_SM_Combined <- SM_All |> 
+  full_join(Temp_All)
+
+
+
+```
+
+
+
+
+
 
 
 ```{r graphs}
