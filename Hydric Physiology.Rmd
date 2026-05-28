@@ -224,33 +224,127 @@ Lizard_Master <- Combined_Lizard |>
 
 
 ```{r run models}
-# Season*Site + Season*Condition + Site*Condition
-lmer_CEWL <- lmer(CEWL_mean ~ 
-                    #Season*Site + Season*Condition
-                    Season*Site*Condition 
-                  #3 way and Condition*Site have high p-values but it is good practice to keep in higher-order interactions if we expected there to be a trend
-                  + Lab_VPD + (1|Campus)  + Posm_mean + SexGravid 
-                  + Ecto_Presence 
-                  #variable that could be removed but would make sense to check for, even if not significant, it is good practice to keep & not change post hoc
-                  , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+# CEWL MODEL
+lmer_CEWL <- lmer(log(CEWL_mean) ~ #log transform to make residual plots better 
+                    Season*Site + Season*scale(Condition) + 
+                    scale(Posm_mean)*Site + scale(Posm_mean)*Season
+                  # there are also sig interactions with Posm can't ignore these
+                  # these are also the results you should present for Figure 6
+                  + scale(Lab_VPD)  + SexGravid 
+                  + (1|Campus)
+                  , data = filter(low_cond,!is.na(CEWL_mean)), REML = F)
 anova(lmer_CEWL) 
+summary(lmer_CEWL) # check correlation table and AIC value using summary
 
-lmer_Posm <- lmer(Posm_mean ~ 
-                  Season*Site*Condition 
-                  #keep 3-way because it is only marginally non-significant and reveals 2-ways
-                  #Season*Site + Season*Condition + Site*Condition
-                  + SexGravid + (1|Campus)
-                  + Ecto_Presence
-                  #keeping ecto_presence, though not significant itself, reveals site*condition interaction
-                  ,
-                  data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
-anova(lmer_Posm)
+# look for correlations among fixed factors - weird strong correlation btwn Lab VPD and Season!
+# But removing Lab VPD from the model above doesn't really change anything and the model is
+# worse based on AIC values
+psych::pairs.panels(Lizard_Master[c("Season", "Site", "Condition", "Lab_VPD", "Posm_mean",
+                             "SexGravid", "SVL")], stars=T)
 
-lmer_Hem <- lmer(Hematocrit ~ Season*Site*Condition 
-                 + SexGravid + (1|Campus) + Ecto_Presence,
-                 data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
-anova(lmer_Hem)
+# Model evaluation with DHARMa
+# Running basic simulation for residuals
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = lmer_CEWL, n = 500)
+#simulationOutput$scaledResiduals
+
+#Plotting results
+plot(simulationOutput) #looks good
+
+data_CEWL_lmer <- low_cond %>% filter(!is.na(CEWL_mean),
+                                      !is.na(SVL),
+                                      !is.na(Condition),
+                                      !is.na(Posm_mean))
+
+#####Checking resids against factors
+plotResiduals(simulationOutput, form = data_CEWL_lmer$Lab_VPD) #looks good
+plotResiduals(simulationOutput, form = data_CEWL_lmer$Season) #deviations present
+plotResiduals(simulationOutput, form = data_CEWL_lmer$Site) #deviations present
+plotResiduals(simulationOutput, form = data_CEWL_lmer$Condition) #looks good
+plotResiduals(simulationOutput, form = data_CEWL_lmer$Posm_mean) #deviations detected
+
+#####Testing for overdispersion.
+testDispersion(simulationOutput) #looks good
+
+
 ```
+
+```{r}
+# PLASMA OSMOLALITY MODEL
+lmer_Posm <- lmer(log(Posm_mean) ~ 
+                  Season + scale(Condition) + Site + SexGravid
+                  + (1|Campus)
+                  ,
+                  data = filter(low_cond, !is.na(Posm_mean)), REML = F)
+# I removed all interactions as they were only marginally significant once ecto was removed
+# we have no good reason to include ecto and it's hard to interpret all these interactions
+# the simpler model is better and easier to understand
+anova(lmer_Posm)
+summary(lmer_Posm)
+
+# Model evaluation with DHARMa
+# Running basic simulation for residuals
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = lmer_Posm, n = 500)
+#simulationOutput$scaledResiduals
+
+#Plotting results
+plot(simulationOutput) #slight deviations present at lower end, #qqplot good
+
+data_Posm_lmer <- low_cond %>% filter(!is.na(Posm_mean),
+                                      !is.na(Condition))
+
+#####Checking resids against factors
+plotResiduals(simulationOutput, form = data_Posm_lmer$Season) #looks good
+plotResiduals(simulationOutput, form = data_Posm_lmer$Site) #looks good
+plotResiduals(simulationOutput, form = data_Posm_lmer$Condition) #deviations present, but not terrible
+
+#####Testing for overdispersion.
+testDispersion(simulationOutput) #looks good
+
+```
+
+```{r}
+# HEMATOCRIT MODEL!
+# remove two individual with high conditions (let's look into these)
+low_cond <- subset(Lizard_Master, Condition < 0.4)
+lmer_Hem <- lmer(Hematocrit ~ Season*Site + scale(Condition) 
+                 + SexGravid + (1|Campus),
+                 data = filter(low_cond, !is.na(Hematocrit)), REML = F)
+anova(lmer_Hem) 
+summary(lmer_Hem)
+# the significant three-way interaction is entirely driven by two
+              # individuals with unusually high condition values. If you remove them
+              # only the Site*Season remains
+# rerunning the models above with low_cond does not change their results.
+
+# Model evaluation with DHARMa
+# Running basic simulation for residuals
+library(DHARMa)
+simulationOutput <- simulateResiduals(fittedModel = lmer_Hem, n = 500)
+#simulationOutput$scaledResiduals
+
+#Plotting results
+plot(simulationOutput) #looks good
+
+data_Hema_lmer <- Lizard_Master %>% filter(!is.na(Hematocrit),
+                                      !is.na(Condition))
+
+#####Checking resids against factors
+plotResiduals(simulationOutput, form = data_Hema_lmer$Season) #looks good
+plotResiduals(simulationOutput, form = data_Hema_lmer$Site) #looks good
+plotResiduals(simulationOutput, form = data_Hema_lmer$Condition)#looks good
+plotResiduals(simulationOutput, form = data_Hema_lmer$SexGravid) #looks good 
+
+#####Testing for overdispersion.
+testDispersion(simulationOutput) #looks good
+
+# look at interaction
+ggplot(data = low_cond, aes(x = Site, y = Hematocrit, color = Season))+
+  geom_boxplot()
+
+```
+
 
 
 ```{r graph cewl}
@@ -262,9 +356,9 @@ okabe_ito <- c(
   "#56B4E9") # blue
 #Cewl Model with background
 ggplot()+
-  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
-                                        color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
-                                        fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
+  geom_jitter(data = low_cond, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
+                                        color = ifelse(low_cond$Site == "ON", "grey50", "grey70"),
+                                        fill = ifelse(low_cond$Site == "ON", "grey65", "grey85"),
               width = .2, show.legend = F, shape = 21, size = 2) +
   # scale_color_manual(
   #   values = c("ON" = "grey65", 
