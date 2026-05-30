@@ -167,6 +167,12 @@ Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_15"
 #               & Lizard_Data_All$Season == "", "Hematocrit"] <- NA
 # Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_9" 
 #               & Lizard_Data_All$Season == "Fall", "Hematocrit"] <- NA
+
+Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_9"
+              & Lizard_Data_All$Season == "Fall", "Mass"] <- NA
+Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_ON_5"
+              & Lizard_Data_All$Season == "Fall", "Mass"] <- NA
+
 ```
 
 ```{r sample sizes}
@@ -226,28 +232,20 @@ Lizard_Master <- Combined_Lizard |>
 ```{r run models}
 # Season*Site + Season*Condition + Site*Condition
 lmer_CEWL <- lmer(CEWL_mean ~ 
-                    #Season*Site + Season*Condition
-                    Season*Site*Condition 
-                  #3 way and Condition*Site have high p-values but it is good practice to keep in higher-order interactions if we expected there to be a trend
+                    Season*Site + Season*Condition + Site*Condition 
                   + Lab_VPD + (1|Campus)  + Posm_mean + SexGravid 
-                  + Ecto_Presence 
-                  #variable that could be removed but would make sense to check for, even if not significant, it is good practice to keep & not change post hoc
                   , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
 anova(lmer_CEWL) 
 
 lmer_Posm <- lmer(Posm_mean ~ 
-                  Season*Site*Condition 
-                  #keep 3-way because it is only marginally non-significant and reveals 2-ways
-                  #Season*Site + Season*Condition + Site*Condition
-                  + SexGravid + (1|Campus)
-                  + Ecto_Presence
-                  #keeping ecto_presence, though not significant itself, reveals site*condition interaction
-                  ,
+                  Season*Site + Season*Condition + Site*Condition +
+                  SexGravid + (1|Campus),
                   data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
 anova(lmer_Posm)
 
-lmer_Hem <- lmer(Hematocrit ~ Season*Site*Condition 
-                 + SexGravid + (1|Campus) + Ecto_Presence,
+lmer_Hem <- lmer(Hematocrit ~ 
+                 Season*Site + Season*Condition + Site*Condition +
+                 SexGravid + (1|Campus) + Ecto_Presence,
                  data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
 anova(lmer_Hem)
 ```

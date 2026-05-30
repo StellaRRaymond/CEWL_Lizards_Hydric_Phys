@@ -254,35 +254,40 @@ Temp_HourlyAvgs_lmer <- Temp_HourlyAvgsLong |>
 #sun mean & cv
 HourlyAvgs_lmer_SunMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
                                 (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
-                        data = filter(Temp_HourlyAvgs_lmer,
+                                REML = FALSE, 
+                                data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Sun"))
 HourlyAvgs_lmer_SunCV <- lmer(log(cv)~Site*Month+poly(Time,4)+
                                 (1|Campus) + (1|Site:Campus) +
                                 (1|Month:Site:Campus),
-                        data = filter(Temp_HourlyAvgs_lmer,
+                              REML = FALSE, 
+                              data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Sun"))
 #shade mean & cv
 HourlyAvgs_lmer_ShadeMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
-                        data = filter(Temp_HourlyAvgs_lmer,
+                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                  REML = FALSE, 
+                                  data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Shade"))
 HourlyAvgs_lmer_ShadeCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
-                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
-                        data = filter(Temp_HourlyAvgs_lmer,
+                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                REML = FALSE, 
+                                data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Shade"))
 #ambient mean & cv
 HourlyAvgs_lmer_AmbMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),, 
-                        data = filter(Temp_HourlyAvgs_lmer,
+                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                REML = FALSE, 
+                                data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Ambient",
                                       !Campus == "CSUSM"))
 HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
                                 (1|Campus) #+ (1|Site:Campus) 
-                              + (1|Month:Site:Campus)
-                              , 
-                        data = filter(Temp_HourlyAvgs_lmer,
-                                      Location == "Ambient",
-                                      !Campus == "CSUSM"))
+                              + (1|Month:Site:Campus),
+                              REML = FALSE, 
+                              data = filter(Temp_HourlyAvgs_lmer,
+                                            Location == "Ambient",
+                                           !Campus == "CSUSM"))
 ```
 
 
