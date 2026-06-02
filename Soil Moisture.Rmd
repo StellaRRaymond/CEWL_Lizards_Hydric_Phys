@@ -101,7 +101,7 @@ SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","S
   filter(!Month %in% c("Feb", "Oct", "Nov"))
 
 
-VPD_All <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
+VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
                      col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
   select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
   pivot_longer(
@@ -244,7 +244,7 @@ VPD_All <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
 
 
 ```{r filter}
-VPD_All <- VPD_All |> 
+VPD_All <- VPD_All_Inported |> 
   #Removed only because it was removed from the other data set (an is likely sunned off)
   filter(!(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-05-2025 12:30:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
          !(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-06-2025 13:00:00") & DateTime <= mdy_hms("03-06-2025 18:00:00")),) |> 
@@ -257,7 +257,19 @@ VPD_All <- VPD_All |>
          !(Campus == "Whittier" & Site == "On" &
            DateTime >= ymd_hms("2025-09-11 12:30:00")),
          #!(Campus == "Pepperdine" & Site == "On" & DateTime > as.POSIXct("2025-08-17 00:00:00"))
-         )
+         ) |> 
+  left_join(
+    select(Temp_All, !c("Sun", "Shade", "Time", "Time_sec", "Season")), 
+            by = c("Campus", "DateTime", "Site", "Month", "MonthDayYear")) |> 
+  select(!c("Temp", "VPD")) |> 
+  mutate(es = (.611 * (exp((17.502 * Ambient )/(Ambient + 240.97)))),
+         ea = es * (RH/100),
+         VPD = es - ea)
+
+# df_filtered_unequal <- subset(VPD_All, round(Temp, 5) != round(Ambient, 5)) |> 
+#   select(Temp, Ambient) 
+# This code validated that I should use Ambient loggers instead because when I inputted the data into the spreadsheet, some of the temperature values were calibrated and some were not. As a result, I just imported the calibrated values. 
+
 ```
 
 
@@ -361,6 +373,12 @@ LM_SM_HourlyAvgsLong <- SM_HourlyAvgsLong |>
 
 ```{r timeline}
 SM_All |>
+  group_by(Campus) |>
+  summarize(
+    first_date = min(DateTime, na.rm = TRUE),
+    last_date  = max(DateTime, na.rm = TRUE))
+
+VPD_All_Inported |>
   group_by(Campus) |>
   summarize(
     first_date = min(DateTime, na.rm = TRUE),

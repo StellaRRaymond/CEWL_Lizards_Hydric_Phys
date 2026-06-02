@@ -10,12 +10,18 @@ output: pdf_document
 #| warning: False #Added to prevent the printing of excess code
 #| message: false
 
-library(tidyverse)
-library(readxl)
-library(ggplot2)
-library(lmerTest)
-library(ggeffects)
-library(emmeans)
+required_packages <-function(...) { 
+  libs<-unlist(list(...)) 
+  req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
+  need<-libs[req==FALSE] 
+  if(length(need)>0){ 
+    install.packages(need, repos = "http://cran.us.r-project.org") 
+    lapply(need, library, character.only=TRUE) 
+  }
+  else{message("No packages required installation.")} 
+}
+
+required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", "emmeans", "generics")
 
 Hydric_Phys <- read_xlsx("Hydric_Physiology.xlsx")
 CEWL_Data <- read_xlsx("CEWL_Values.xlsx")
@@ -168,11 +174,6 @@ Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_15"
 # Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_9" 
 #               & Lizard_Data_All$Season == "Fall", "Hematocrit"] <- NA
 
-Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_OFF_9"
-              & Lizard_Data_All$Season == "Fall", "Mass"] <- NA
-Lizard_Data_All[Lizard_Data_All$LizardID == "UCLA_ON_5"
-              & Lizard_Data_All$Season == "Fall", "Mass"] <- NA
-
 ```
 
 ```{r sample sizes}
@@ -196,7 +197,10 @@ SVL <- read_xlsx("Cool Lizards SVL.xlsx") |>
     "CP_OFF_12_0001",     # crooked, use the other scan
     "CSUSB_ON_06_0001",   # a replicate with a hand in the way
     "UCLA_OFF_01_0002",   # dorsal replicate
-    "PEP_ON_51_0001"      # replicate
+    "PEP_ON_51_0001",     # replicate
+    "CP_OFF_03_0001",     # crooked
+    "CP_OFF_12_0002",     # unneeded dorsal measurment
+    "CSUSB_OFF_04_0001"
   )) |> 
   mutate(
     `Liz ID` = str_remove(`Liz ID`, "_000[1234]$"),
@@ -213,12 +217,12 @@ SVL <- read_xlsx("Cool Lizards SVL.xlsx") |>
 Combined_Lizard <- left_join(Lizard_Data_All, SVL,
                              by = c("LizardID","Site","Season", "SiteSeason"))
   
-Pieg_Model <- lm(log(Mass) ~ log(SVL), data = Combined_Lizard, na.action = na.exclude)
+Condition_Model <- lm(log(Mass) ~ log(SVL), data = Combined_Lizard, na.action = na.exclude)
 
 Lizard_Master <- Combined_Lizard |> 
   mutate(Sion = Mass / SVL,
-         Pieg = log(Mass) - predict(Pieg_Model, newdata = Combined_Lizard),
-         Condition = residuals(Pieg_Model)) #this is the exact same as "Pieg", different format
+         Pieg = log(Mass) - predict(Condition_Model, newdata = Combined_Lizard),
+         Condition = residuals(Condition_Model)) #this is the exact same as "Pieg", different format
 
 #Identify missing SVLs
 # Missing_SVL <- 
@@ -228,27 +232,123 @@ Lizard_Master <- Combined_Lizard |>
   #write_xlsx("Missing SVL.xlsx")
 ```
 
+```{r}
+#| warning: FALSE
+
+Lizard_Master_con_outlier <- Lizard_Master |> 
+  mutate(condition_outlier = "no")
+
+augments_df <- augment(Condition_Model, data = Combined_Lizard)
+
+Lizard_Master_con_outlier <- augments_df |> 
+  select(Indiv_Lizard, .std.resid) |> 
+  right_join(Lizard_Master_con_outlier, 
+             by = "Indiv_Lizard") |> 
+  mutate(condition_outlier = ifelse(abs(.std.resid) > 2, "YES", "NO"))
+
+ggplot(data = Lizard_Master_con_outlier, 
+             aes(x = SVL, y = Mass)) +
+  geom_point(aes(color = condition_outlier), show.legend = FALSE) +
+  geom_label_repel(
+    data = subset(Lizard_Master_con_outlier,
+                  condition_outlier == "YES", force = 1, na.rm = TRUE),
+    aes(label = Indiv_Lizard))+
+  theme_bw()+
+  labs(title = "Body Condition Outliers")
+
+# head(sort(abs(augments_df$.std.resid), decreasing = TRUE))
+```
+
+```{r}
+
+Lizard_Master[Lizard_Master$LizardID == "UCLA_OFF_9"
+              & Lizard_Master$Season == "Fall", "Condition"] <- NA
+Lizard_Master[Lizard_Master$LizardID == "UCLA_ON_5"
+              & Lizard_Master$Season == "Fall", "Condition"] <- NA
+Lizard_Master[Lizard_Master$LizardID == "CSUSB_ON_8"
+              & Lizard_Master$Season == "Fall", "Condition"] <- NA
+
+```
+
+
+```{r}
+options(na.action = "na.fail")
+
+CEWL_data_clean <- Lizard_Master |>
+  select(CEWL_mean, Season, Site, Condition, Lab_VPD, SexGravid, Campus) |>
+  drop_na()
+
+Posm_data_clean <- Lizard_Master |>
+  select(Posm_mean, Season, Site, Condition, SexGravid, Campus) |>
+  drop_na()
+
+Hem_data_clean <- Lizard_Master |>
+  select(Hematocrit, Season, Site, Condition, SexGravid, Campus) |>
+  drop_na()
+
+lmer_CEWL_dredge <- lmer(CEWL_mean ~ 
+                      Season + Site + Condition + 
+                      Season:Site + Site:Condition + Season:Condition +
+                      Lab_VPD + SexGravid +
+                      (1|Campus) + (1|Season:Campus),
+                      data = CEWL_data_clean, REML = F)
+lmer_Posm_dredge <- lmer(Posm_mean ~ 
+                       Season + Site + Condition + 
+                       Season:Site + Site:Condition + Season:Condition +
+                       SexGravid +
+                       (1|Season:Campus) + (1|Site:Campus),
+                       data = Posm_data_clean, REML = F)
+lmer_Hemato_dredge <- lmer(Hematocrit ~ 
+                         Season + Site + Condition + 
+                         Season:Site + Site:Condition + Season:Condition +
+                         SexGravid +
+                         (1|Campus) + (1|Season:Campus) + (1|Site:Campus),
+                         data = Hem_data_clean, REML = F)
+
+
+dredge_fit_CEWL <- dredge(lmer_CEWL)
+dredge_fit_Posm <- dredge(lmer_Posm_dredge)
+dredge_fit_Hem <- dredge(lmer_Hemato_dredge)
+
+subset(dredge_fit_CEWL, delta < 2)
+subset(dredge_fit_Posm, delta < 2)
+subset(dredge_fit_Hem, delta < 2)
+
+```
+
 
 ```{r run models}
+options(na.action = "na.omit")
 # Season*Site + Season*Condition + Site*Condition
 lmer_CEWL <- lmer(CEWL_mean ~ 
-                    Season*Site + Season*Condition + Site*Condition 
-                  + Lab_VPD + (1|Campus)  + Posm_mean + SexGravid 
-                  , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+                  #Season*Site + Season*Condition + Site*Condition +
+                  Season + Site + Condition + Season:Site + Site:Condition + Season:Condition +
+                  Lab_VPD + SexGravid +
+                  (1|Campus) + (1|Season:Campus)
+                 #+ (1|Site:Campus)   # Site:Campus had a VarCorr() stdDev of 0, contributing essentially nothing to the model. Thus, it was removed
+                  ,
+                  data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
 anova(lmer_CEWL) 
 
 lmer_Posm <- lmer(Posm_mean ~ 
                   Season*Site + Season*Condition + Site*Condition +
-                  SexGravid + (1|Campus),
+                  SexGravid +
+                  (1|Site:Campus) + (1|Season:Campus)
+                 #+ (1|Campus)   #1|Campus had a VarCorr() stdDev of 0, contributing essentially nothing to the model and causing "boundary (singular) fit". Thus, it was removed
+                  ,
                   data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
 anova(lmer_Posm)
 
 lmer_Hem <- lmer(Hematocrit ~ 
                  Season*Site + Season*Condition + Site*Condition +
-                 SexGravid + (1|Campus) + Ecto_Presence,
+                 SexGravid + 
+                 (1|Campus) + (1|Site:Campus) + (1|Season:Campus),
                  data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
 anova(lmer_Hem)
 ```
+
+
+
 
 
 ```{r graph cewl}
