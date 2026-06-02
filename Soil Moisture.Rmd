@@ -23,6 +23,9 @@ required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans")
 
 
 ```{r setup}
+#for VPD later
+Temp_All <- read_xlsx("Prelim Stat All 2026.xlsx")
+#Soil Moisture
 SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","SM") |>
   pivot_longer(cols = -DateTime, 
                names_to = "Site_Location", 
@@ -96,6 +99,177 @@ SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","S
   mutate(Month = month(DateTime, label = T, abbr = T),
          Time = hms(format(DateTime, "%H:%M:%S"))) |> 
   filter(!Month %in% c("Feb", "Oct", "Nov"))
+
+
+VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
+                     col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+  select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+  pivot_longer(
+    cols = -DateTime,
+    names_to = c("Site", "Variable"),
+    names_sep = "_",
+    values_to = "Value"
+  ) |>
+  pivot_wider(
+    names_from = Variable,
+    values_from = Value
+  ) |>
+  mutate(Campus = "Cal Poly") |>
+  full_join(
+    read_xlsx(path = "Abiotics/CSUSM/CSUSM Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+            select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              ) |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value
+              ) |>
+            mutate(Campus = "CSUSM"),
+    by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/Pepperdine/Pepperdine Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |> 
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )  |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "Pepperdine"),
+    by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/Scripps/Scripps Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )  |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "Scripps"),
+            by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/Whittier/Whittier Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+      select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )   |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "Whittier"),
+            by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/CSUSB/CSUSB Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+      select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )   |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "CSUSB"),
+           by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/CSULB/CSULB Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )   |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "CSULB"),
+            by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/UCLA/UCLA Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )   |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "UCLA"),
+            by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  full_join(
+    read_xlsx(path = "Abiotics/CLU/CLU Master.xlsx","RH",
+              col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
+              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              pivot_longer(
+                cols = -DateTime,
+                names_to = c("Site", "Variable"),
+                names_sep = "_",
+                values_to = "Value"
+              )   |>
+              pivot_wider(
+                names_from = Variable,
+                values_from = Value) |>
+              mutate(Campus = "CLU"),
+            by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
+  filter(!is.na(DateTime), !is.na(VPD)) |>
+  mutate(Time = hms(format(DateTime, "%H:%M:%S")),
+         MonthDayYear = mdy(format(DateTime, "%D")),
+         Month = month(DateTime, label = T, abbr = T))
+```
+
+
+```{r filter}
+VPD_All <- VPD_All_Inported |> 
+  #Removed only because it was removed from the other data set (an is likely sunned off)
+  filter(!(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-05-2025 12:30:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
+         !(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-06-2025 13:00:00") & DateTime <= mdy_hms("03-06-2025 18:00:00")),) |> 
+  filter(!Month %in% c("Feb","Oct","Nov"),
+         !Campus == "CSUSM",
+         #More known sunning of shade logger only
+         !(Campus == "Whittier" & Site == "On" &
+           DateTime >= ymd_hms("2025-06-01 00:00:00") &
+           DateTime <= ymd_hms("2025-08-07 19:00:00")),
+         !(Campus == "Whittier" & Site == "On" &
+           DateTime >= ymd_hms("2025-09-11 12:30:00")),
+         #!(Campus == "Pepperdine" & Site == "On" & DateTime > as.POSIXct("2025-08-17 00:00:00"))
+         ) |> 
+  left_join(
+    select(Temp_All, !c("Sun", "Shade", "Time", "Time_sec", "Season")), 
+            by = c("Campus", "DateTime", "Site", "Month", "MonthDayYear")) |> 
+  select(!c("Temp", "VPD")) |> 
+  mutate(es = (.611 * (exp((17.502 * Ambient )/(Ambient + 240.97)))),
+         ea = es * (RH/100),
+         VPD = es - ea)
+
+# df_filtered_unequal <- subset(VPD_All, round(Temp, 5) != round(Ambient, 5)) |> 
+#   select(Temp, Ambient) 
+# This code validated that I should use Ambient loggers instead because when I inputted the data into the spreadsheet, some of the temperature values were calibrated and some were not. As a result, I just imported the calibrated values. 
+
 ```
 
 
@@ -197,15 +371,27 @@ LM_SM_HourlyAvgsLong <- SM_HourlyAvgsLong |>
          Month = factor(Month, levels = month.abb[3:9])) 
 ```
 
-
 ```{r timeline}
 SM_All |>
   group_by(Campus) |>
   summarize(
     first_date = min(DateTime, na.rm = TRUE),
     last_date  = max(DateTime, na.rm = TRUE))
+
+VPD_All_Inported |>
+  group_by(Campus) |>
+  summarize(
+    first_date = min(DateTime, na.rm = TRUE),
+    last_date  = max(DateTime, na.rm = TRUE))
+
+VPD_All |>
+  group_by(Campus) |>
+  summarize(
+    first_date = min(DateTime, na.rm = TRUE),
+    last_date  = max(DateTime, na.rm = TRUE))
 ```
 
+##SM Models
 ```{r models}
 lm_SM_Sun <- lmer(mean ~ Site*Month +
                             poly(Time,2) + 
@@ -227,7 +413,9 @@ lm_SM_Shade <- lmer(mean ~ Site*Month + poly(Time,2) +
 anova(lm_SM_Sun)
 anova(lm_SM_Shade) 
 pairs(emmeans(lm_SM_Sun, specs = ~ Site))
+```
 
+```{r more-models}
 vif(lm_SM_Sun_2)
 AIC(lm_SM_Sun_2)
 plot(lm_SM_Sun_2)
@@ -250,6 +438,22 @@ residuals <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun") |> 
   mutate(residuals = resid(lm_SM_Sun))
 ```
+
+##VPD Models
+```{r combine}
+
+VPD_Table <- VPD_All |> 
+  full_join(Temp_All,
+            by = c(Campus, Site, DateTime, )) 
+
+
+
+```
+
+
+
+
+
 
 
 ```{r graphs}
