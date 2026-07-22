@@ -18,7 +18,7 @@ required_packages <-function(...) {
   else{message("No packages required installation.")} 
 }
 
-required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "emmeans")
+required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans")
 ```
 
 ```{r load, include = FALSE}
@@ -252,13 +252,23 @@ Temp_HourlyAvgs_lmer <- Temp_HourlyAvgsLong |>
 
 ```{r models}
 #sun mean & cv
+# HourlyAvgs_glmer_SunMean <- glmer(mean ~ Site*Month + poly(Time,2) +
+#                                 (1|Campus) + (1|Site:Campus) + 
+#                                 (1|Month:Site:Campus),
+#                                 #REML = FALSE, 
+#                                 family = Gamma(link = "log"),
+#                                 data = filter(Temp_HourlyAvgs_lmer,
+#                                       Location == "Sun"))
+
 HourlyAvgs_lmer_SunMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                (1|Campus) + (1|Site:Campus) + 
+                                (1|Month:Site:Campus),
                                 REML = FALSE, 
                                 data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Sun"))
+
 HourlyAvgs_lmer_SunCV <- lmer(log(cv)~Site*Month+poly(Time,4)+
-                                (1|Campus) + (1|Site:Campus) +
+                                (1|Campus) + #(1|Site:Campus) +
                                 (1|Month:Site:Campus),
                               REML = FALSE, 
                               data = filter(Temp_HourlyAvgs_lmer,
@@ -276,13 +286,14 @@ HourlyAvgs_lmer_ShadeCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
                                       Location == "Shade"))
 #ambient mean & cv
 HourlyAvgs_lmer_AmbMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                  (1|Campus) + (1|Site:Campus) +
+                                  (1|Month:Site:Campus),
                                 REML = FALSE, 
                                 data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Ambient",
                                       !Campus == "CSUSM"))
 HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
-                                (1|Campus) #+ (1|Site:Campus) 
+                                (1|Campus) + (1|Site:Campus) 
                               + (1|Month:Site:Campus),
                               REML = FALSE, 
                               data = filter(Temp_HourlyAvgs_lmer,
@@ -293,25 +304,46 @@ HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
 
 ```{r anova}
 anova(HourlyAvgs_lmer_SunMean)
+Anova(HourlyAvgs_lmer_SunMean)
+summary(HourlyAvgs_lmer_SunMean)
+
+
 anova(HourlyAvgs_lmer_ShadeMean)
+Anova(HourlyAvgs_lmer_ShadeMean)
+summary(HourlyAvgs_lmer_ShadeMean)
+
 anova(HourlyAvgs_lmer_AmbMean)
-
+Anova(HourlyAvgs_lmer_AmbMean)
+summary(HourlyAvgs_lmer_AmbMean)
 #pairs(emmeans(HourlyAvgs_lmer_*****Mean, specs = ~ Site|Month, adjust = "sidak"))
+```
 
 
+```{r check-sun-model}
 qqnorm(resid(HourlyAvgs_lmer_SunMean))
-qqline(resid(HourlyAvgs_lmer_SunMean))
 hist(resid(HourlyAvgs_lmer_SunMean))
-#check_collinearity(HourlyAvgs_lmer)
-check_model(HourlyAvgs_lmer_SunMean)
-DHARMa::checkModel(HourlyAvgs_lmer_SunMean)
+plot(HourlyAvgs_lmer_SunMean)
+# check_model(HourlyAvgs_lmer_SunMean)
+```
 
 
-# plot(simulateResiduals(fittedModel = HourlyAvgs_lmer, plot = F))
-# qqplot(your_data, rnorm(length(your_data)))
+```{r check-shade-model}
+qqnorm(resid(HourlyAvgs_lmer_ShadeMean))
+hist(resid(HourlyAvgs_lmer_ShadeMean))
+plot(HourlyAvgs_lmer_ShadeMean)
+```
 
-pairs(emmeans(HourlyAvgs_lmer, specs = ~ Site))
-ranef(HourlyAvgs_lmer)
+```{r check-ambient-model}
+qqnorm(resid(HourlyAvgs_lmer_AmbMean))
+hist(resid(HourlyAvgs_lmer_AmbMean))
+plot(HourlyAvgs_lmer_AmbMean)
+```
+
+
+```{r check-residuals}
+simulationOutput <- simulateResiduals(fittedModel = HourlyAvgs_lmer_SunMean, n = 1000)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
 #contrasts(HourlyAvgs_lmer)
 ```
 

@@ -236,7 +236,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
                 values_from = Value) |>
               mutate(Campus = "CLU"),
             by = c("DateTime", "RH", "Temp", "Site", "VPD", "Campus")) |>
-  filter(!is.na(DateTime), !is.na(VPD)) |>
+  filter(!is.na(DateTime)) |>
   mutate(Time = hms(format(DateTime, "%H:%M:%S")),
          MonthDayYear = mdy(format(DateTime, "%D")),
          Month = month(DateTime, label = T, abbr = T))
@@ -285,37 +285,39 @@ SM_All <- SM_All_PrecCalib |>
       ~ SM*0.927229213 + 0.1055328493,
       Campus == "Cal Poly" & Site == "On" & Location == "Sun"
       ~ SM*0.8714872975	+ 0.1059928176,
-      Campus == "CSUSB" & Site == "Off" & Location == "Shade"
-      ~ SM*1.147883049 - 0.07195710998,
+  #Commented out Off_Shade because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
+      # Campus == "CSUSB" & Site == "Off" & Location == "Shade"
+      # ~ SM*1.147883049 - 0.07195710998,
       Campus == "CSUSB" & Site == "Off" & Location == "Sun" 
       & DateTime < ymd("2025-04-02")
       ~ SM*0.9449593421 +	0.04963067249,
+  #Commented out On_Shade because calibration made it dip far below zero, exceeding -1 at times when previously above 0
       # Campus == "CSUSB" & Site == "On" & Location == "Shade"
       # ~ SM*1.054337754 - 0.04200089063,
-  #I have reason to believe this calibration may be invalid and thus it was commented out
-      # Campus == "CSUSB" & Site == "On" & Location == "Sun" 
+  #I have reason to believe this calibration may be invalid and thus it was commented out. Commented out On_Sun because calibration made it dip far below zero, exceeding -1 at times when previously above 0
+      # Campus == "CSUSB" & Site == "On" & Location == "Sun"
       # ~ SM*1.063970956 - 0.05517880129,
       Campus == "UCLA" & Site == "Off" & Location == "Shade"
       ~ SM*1.00754774	- 0.004184319254,
       Campus == "UCLA" & Site == "Off" & Location == "Sun"
       ~ SM*1.127664165 - 0.05965336487,
-  #I have reason to believe this calibration may be invalid and thus it was commented out
+  #I have reason to believe this calibration may be invalid and thus it was commented out. exceeded -0.2 once calibrated!
       # Campus == "UCLA" & Site == "On" & Location == "Shade"
       # ~ SM*(1.794141579) - 0.1880992677,
-      #No On_Sun calibration because the logger was destroyed
-      Campus == "Whittier" & Site == "Off" & Location == "Shade"
-      ~ SM*1.294021546 - 0.1041101845,
-      Campus == "Whittier" & Site == "Off" & Location == "Sun"
-      ~ SM*1.089305032 - 0.04532633929,
-  #I have reason to believe this calibration may be invalid and thus it was commented out
+  #All 4 whittier soil moisture probes dip far below 0 and either meet or exceed -.1
+      # Campus == "Whittier" & Site == "Off" & Location == "Shade"
+      # ~ SM*1.294021546 - 0.1041101845,
+      # Campus == "Whittier" & Site == "Off" & Location == "Sun"
+      # ~ SM*1.089305032 - 0.04532633929,
       # Campus == "Whittier" & Site == "On" & Location == "Shade"
-      # ~ SM*1.284492549 - 0.1269630441, 
-      Campus == "Whittier" & Site == "On" & Location == "Sun"
-      ~ SM*1.209386722 - 0.0831184615,
+      # ~ SM*1.284492549 - 0.1269630441,
+      # Campus == "Whittier" & Site == "On" & Location == "Sun"
+      # ~ SM*1.209386722 - 0.0831184615,
       Campus == "Scripps" & Site == "Off" & Location == "Shade"
       ~ SM*1.11785729	- 0.04209083718,
-      Campus == "Scripps" & Site == "Off" & Location == "Sun"
-      ~ SM*1.222856632 - 0.08809597617,
+  #I have reason to believe this calibration may be invalid and thus it was commented out. Off_Sun  calibration made it dip far below zero, exceeding far below -1 when previously only just below 0
+      # Campus == "Scripps" & Site == "Off" & Location == "Sun"
+      # ~ SM*1.222856632 - 0.08809597617,
       Campus == "Scripps" & Site == "On" & Location == "Shade"
       ~ SM*1.063832017 - 0.02247110766,
       Campus == "Scripps" & Site == "On" & Location == "Sun" 
@@ -326,8 +328,9 @@ SM_All <- SM_All_PrecCalib |>
       ~ SM*0.9345619796 - 0.02029910189,
       Campus == "Pepperdine" & Site == "On" & Location == "Shade"
       ~ SM*0.9942100727	+ 0.01308747899,
-      Campus == "Pepperdine" & Site == "On" & Location == "Sun" 
-      ~ SM*1.119365525 - 0.0598695355,
+  #Commented out On_Sun because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
+      # Campus == "Pepperdine" & Site == "On" & Location == "Sun" 
+      # ~ SM*1.119365525 - 0.0598695355,
       Campus == "CLU" & Site == "Off" & Location == "Shade"
       ~ SM*0.8026575529	+ 0.09798414304,
       Campus == "CLU" & Site == "Off" & Location == "Sun"
@@ -338,19 +341,38 @@ SM_All <- SM_All_PrecCalib |>
       ~ SM*0.7596081387	+ 0.1262780708,
       #No Off_Sun for CSULB because it was chewed through early on
       Campus == "CSULB" & Site == "Off" & Location == "Sun"
-      ~ SM*1.050806961 - 0.04829162008,
-      Campus == "CSULB" & Site == "On" & Location == "Shade"
-      ~ SM*1.455172923 - 0.1876963955,
+      ~ SM*1.050806961	- 0.04829162008, 
+  #Commented out Off_Shade because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
+      # Campus == "CSULB" & Site == "Off" & Location == "Shade"
+      # ~ SM*1.219979101 - 0.08724627315,
+  #Commented out On_Shade because calibration made it dip far below zero when previously above 0
+      # Campus == "CSULB" & Site == "On" & Location == "Shade"
+      # ~ SM*1.455172923 - 0.1876963955,
       Campus == "CSULB" & Site == "On" & Location == "Sun" 
       ~ SM*1.181175115 - 0.07712122048,
       TRUE ~ SM
-    )) |> 
+    ))
+# NoCali_Test <- SM_All_PrecCalib |>
+```
+
+
+```{r filter-prepare}
+#SM_HourlyAvgsLong <- SM_All |>
+SM_HourlyAvgsLong <-SM_All_PrecCalib |>
+# SM_HourlyAvgsLong <- NoCali_Test |> 
   filter(!(Campus == "Pepperdine" & Site == "On" & Location == "Sun" & 
            DateTime > as.POSIXct("2025-09-12 08:00:00", tz = "UTC")),
         #!(Campus == "Whittier" & Site == "On" & Location == "Shade" & DateTime > as.POSIXct("2025-04-14 06:00:00") & DateTime < as.POSIXct("2025-04-26 03:00:00"))
-         !(Campus =="Whittier" & Site == "On" & Location == "Sun" & DateTime > as.POSIXct("2025-09-05 08:00:00") & DateTime < as.POSIXct("2025-09-09 00:00:00")))
-
-SM_HourlyAvgsLong <- SM_All |>
+         !(Campus =="Whittier" & Site == "On" & Location == "Sun" & 
+             DateTime > as.POSIXct("2025-09-05 08:00:00") & 
+             DateTime < as.POSIXct("2025-09-09 00:00:00"))) |> 
+  
+  #NOTE: comment out or in these lines for nighttime or daytime
+  #Night:
+  #filter(Time >= hms("20:00:00") | Time <= hms("06:30:00")) |>
+  #Day:
+  #filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
+    
   group_by(Time, Site, Campus, Month, Location) |>
   summarize(
     mean = mean(SM, na.rm = TRUE),
@@ -363,22 +385,52 @@ SM_HourlyAvgsLong <- SM_All |>
   filter(n >= 3)
 #!(Campus == "Cal Poly" & Month == "Mar")
 
+VPD_HourlyAvgsLong <- VPD_All |> 
+  group_by(Time, Site, Campus, Month) |>
+  summarize(
+    mean = mean(VPD, na.rm = TRUE),
+    sd   = sd(VPD, na.rm = TRUE),
+    n    = sum(!is.na(VPD)),
+    se   = sd(VPD, na.rm = TRUE) / sqrt(sum(!is.na(VPD))),
+    cv   = sd(VPD, na.rm = TRUE) / mean(VPD, na.rm = TRUE) * 100,
+    .groups = "drop_last") |>
+  ungroup() |> 
+  filter(n >= 3)
+
+
 LM_SM_HourlyAvgsLong <- SM_HourlyAvgsLong |> 
   mutate(Time = as.numeric(Time)/3600,
          Site = factor(Site),
          Campus = factor(Campus),
          Location = factor(Location),
-         Month = factor(Month, levels = month.abb[3:9])) 
+         Month = factor(Month, levels = month.abb[3:9]))
+
+LM_VPD_HourlyAvgsLong <- VPD_HourlyAvgsLong |> 
+  mutate(Time = as.numeric(Time)/3600,
+         Site = factor(Site),
+         Campus = factor(Campus),
+         Month = factor(Month, levels = month.abb[3:9]))
+  
+SM_Sun_transformed <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Sun") |>
+  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 0.001)
+
+SM_Shade_transformed <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Shade") |>
+  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 0.001)
+#   
+#          mean_transformed = case_when(Location == "Shade" ~ mean +
+#                                         min(filter(LM_SM_HourlyAvgsLong$mean, 
+#                                                    Location == "Shade")), 
+#                                       Location == "Sun" ~ mean + 0.035))
+# 
+# min(LM_SM_HourlyAvgsLong$Mean)
 ```
+
+
 
 ```{r timeline}
 SM_All |>
-  group_by(Campus) |>
-  summarize(
-    first_date = min(DateTime, na.rm = TRUE),
-    last_date  = max(DateTime, na.rm = TRUE))
-
-VPD_All_Inported |>
   group_by(Campus) |>
   summarize(
     first_date = min(DateTime, na.rm = TRUE),
@@ -393,36 +445,80 @@ VPD_All |>
 
 ##SM Models
 ```{r models}
-lm_SM_Sun <- lmer(mean ~ Site*Month +
+lm_SM_Sun <- lmer(mean ~ Site * Month +
                             poly(Time,2) + 
-                            (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                    #Time +
+                    (1|Campus) + 
+                    (1|Site:Campus) +
+                    #(1|Month:Campus) 
+                    (1|Month:Site:Campus)
                   , 
                   REML = FALSE,
                   control = lmerControl(optimizer = "bobyqa"),
                   data = filter(LM_SM_HourlyAvgsLong, 
-                                Location == "Sun"))
+                                Location == "Sun", 
+                                Campus != "UCLA"))
 
-lm_SM_Shade <- lmer(mean ~ Site*Month + poly(Time,2) + 
-                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+lm_SM_Shade <- lmer(mean ~ Site * Month + #poly(Time,2) +
+                      Time +
+                    (1|Campus) + 
+                    (1|Site:Campus) +
+                    #(1|Month:Campus) +
+                   (1|Month:Site:Campus)
                   , 
                   REML = FALSE, 
                   control = lmerControl(optimizer = "bobyqa"),
                   data = filter(LM_SM_HourlyAvgsLong, 
-                                Location == "Shade"))
+                                Location == "Shade", 
+                                Campus != "UCLA"))
 
 anova(lm_SM_Sun)
 anova(lm_SM_Shade) 
-pairs(emmeans(lm_SM_Sun, specs = ~ Site))
+#pairs(emmeans(lm_SM_Shade, specs = ~ Site))
 ```
 
-```{r more-models}
-vif(lm_SM_Sun_2)
-AIC(lm_SM_Sun_2)
-plot(lm_SM_Sun_2)
-qqnorm(resid(lm_SM_Sun_2))
+```{r}
+lm_SM_Sun_transformed <- lmer(mean_transformed
+                              ~ Site * Month +
+                            poly(Time, 2) + 
+                    #(1|Campus) + 
+                    (1|Site:Campus) + (1|Month:Site:Campus), 
+                  REML = FALSE,
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = filter(SM_Sun_transformed, 
+                                Location == "Sun"))
 
+lm_SM_Shade_transformed <- lmer(mean_transformed
+                                ~ Site * Month + poly(Time, 2) + 
+                    #(1|Campus) + 
+                    (1|Site:Campus) + (1|Month:Site:Campus), 
+                  REML = FALSE, 
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = filter(SM_Shade_transformed, 
+                                Location == "Shade"))
+
+anova(lm_SM_Sun_transformed)
+anova(lm_SM_Shade_transformed) 
+```
+
+
+```{r more-models}
+library("car")
+AIC(lm_SM_Sun)
+plot(lm_SM_Sun)
+qqnorm(resid(lm_SM_Sun))
 #pairs(emmeans(lm_SM_Sun, specs = ~ Site|Campus))
 
+AIC(lm_SM_Shade)
+plot(lm_SM_Shade)
+qqnorm(resid(lm_SM_Shade))
+
+
+AIC(lm_SM_Sun_transformed)
+plot(lm_SM_Sun_transformed)
+plot(lm_SM_Shade_transformed)
+qqnorm(resid(lm_SM_Sun_transformed))
+qqnorm(resid(lm_SM_Shade_transformed))
 
 summary(lm_SM_Shade)
 #emmeans(lm_SM, specs = ~ Site|Month)
@@ -434,26 +530,37 @@ plot(fitted(lm_SM_Sun), resid(lm_SM_Sun),
      ylab = "Residuals")
 abline(h = 0, col = "red")
 
+
+options(na.action = "na.omit")
+
 residuals <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun") |> 
   mutate(residuals = resid(lm_SM_Sun))
-```
-
-##VPD Models
-```{r combine}
-
-VPD_Table <- VPD_All |> 
-  full_join(Temp_All,
-            by = c(Campus, Site, DateTime, )) 
-
-
 
 ```
 
 
+```{r}
 
+lm_VPD <- lmer(log(mean) ~ Site * Month +
+                            poly(Time, 4) + 
+                    (1|Campus) + 
+                    (1|Site:Campus) + (1|Month:Site:Campus), 
+                  REML = FALSE,
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = LM_VPD_HourlyAvgsLong)
 
+anova(lm_VPD)
 
+```
+
+```{r}
+qqnorm(resid(lm_VPD))
+
+simulationOutput <- simulateResiduals(fittedModel = lm_VPD, n = 500)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+```
 
 
 ```{r graphs}
