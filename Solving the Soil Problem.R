@@ -14,12 +14,12 @@ ggplot(#filter(
   facet_wrap(~(Location)) +
   geom_point()
 
-ggplot(filter(LM_SM_HourlyAvgsLong, Campus == "UCLA"), 
+ggplot(filter(LM_SM_HourlyAvgsLong, Campus == "Scripps"), 
        aes(x = Time, y = mean, color = Month)) +
   geom_jitter()+
   facet_wrap(~(Site:Location))
 
-ggplot(filter(SM_All_PrecCalib, Campus == "Whittier"), 
+ggplot(filter(SM_All_PrecCalib, Campus == "Scripps"), 
        aes(x = DateTime, y = SM, color = Site)) +
   geom_point()+
   facet_wrap(~(Location))
@@ -50,3 +50,20 @@ SM_All_PrecCalib |>
            q95 = quantile(SM, .95, na.rm = TRUE)
        )
 
+
+
+ggplot(#filter(
+  LM_VPD_HourlyAvgsLong,
+  #Campus == "CLU"), 
+  aes(x = Time, y = mean, color = Site)) +
+  facet_wrap(~(Campus)) +
+  geom_point()
+
+
+ggplot(filter(
+  LM_VPD_HourlyAvgsLong,
+  Month == c("Apr", "May", "Jun")),
+  #Campus == "CLU"), 
+  aes(x = Time, y = mean, color = Month)) +
+  facet_wrap(~(Site)) +
+  geom_point()

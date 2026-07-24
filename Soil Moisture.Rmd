@@ -410,6 +410,12 @@ LM_VPD_HourlyAvgsLong <- VPD_HourlyAvgsLong |>
          Site = factor(Site),
          Campus = factor(Campus),
          Month = factor(Month, levels = month.abb[3:9]))
+
+LM_SM_Sun_df <- LM_SM_HourlyAvgsLong |> 
+  filter(Location == "Sun", Campus != "UCLA")
+
+LM_SM_Shade_df <- LM_SM_HourlyAvgsLong |> 
+  filter(Location == "Shade", Campus != "UCLA")
   
 SM_Sun_transformed <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun") |>
@@ -425,8 +431,8 @@ SM_Shade_transformed <- LM_SM_HourlyAvgsLong |>
 #                                       Location == "Sun" ~ mean + 0.035))
 # 
 # min(LM_SM_HourlyAvgsLong$Mean)
-```
 
+```
 
 
 ```{r timeline}
@@ -450,31 +456,87 @@ lm_SM_Sun <- lmer(mean ~ Site * Month +
                     #Time +
                     (1|Campus) + 
                     (1|Site:Campus) +
-                    #(1|Month:Campus) 
                     (1|Month:Site:Campus)
                   , 
                   REML = FALSE,
                   control = lmerControl(optimizer = "bobyqa"),
-                  data = filter(LM_SM_HourlyAvgsLong, 
-                                Location == "Sun", 
-                                Campus != "UCLA"))
+                  data = LM_SM_Sun_df)
 
-lm_SM_Shade <- lmer(mean ~ Site * Month + #poly(Time,2) +
-                      Time +
+lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
+                      #Time +
                     (1|Campus) + 
                     (1|Site:Campus) +
-                    #(1|Month:Campus) +
                    (1|Month:Site:Campus)
                   , 
                   REML = FALSE, 
                   control = lmerControl(optimizer = "bobyqa"),
-                  data = filter(LM_SM_HourlyAvgsLong, 
-                                Location == "Shade", 
-                                Campus != "UCLA"))
+                  data = LM_SM_Shade_df)
+# lm_SM_Sun_cv <- lmer(cv ~ Site * Month +
+#                             poly(Time,2) +
+#                     #Time +
+#                     (1|Campus)
+#                     # + (1|Site:Campus)
+#                     # + (1|Month:Site:Campus)
+#                   ,
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Sun_df)
+# 
+# lm_SM_Shade_cv <- lmer(log(cv) ~ Site * Month + poly(Time,2) +
+#                       #Time +
+#                     (1|Campus) +
+#                   #(1|Site:Campus) +
+#                    (1|Month:Site:Campus)
+#                   ,
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Shade_df)
+```
 
+
+```{r models}
+#| message: False
 anova(lm_SM_Sun)
 anova(lm_SM_Shade) 
-#pairs(emmeans(lm_SM_Shade, specs = ~ Site))
+pairs(emmeans(lm_SM_Sun, specs = ~ Site))
+pairs(emmeans(lm_SM_Shade, specs = ~ Site))
+
+anova(lm_SM_Sun_cv)
+anova(lm_SM_Shade_cv) 
+pairs(emmeans(lm_SM_Shade, specs = ~ Site|Month))
+```
+
+
+```{r}
+vif(lm_SM_Sun)
+AIC(lm_SM_Sun)
+plot(lm_SM_Sun)
+qqnorm(resid(lm_SM_Sun))
+
+vif(lm_SM_Shade)
+AIC(lm_SM_Shade)
+plot(lm_SM_Shade)
+qqnorm(resid(lm_SM_Shade))
+
+vif(lm_SM_Sun_cv)
+AIC(lm_SM_Sun_cv)
+plot(lm_SM_Sun_cv)
+qqnorm(resid(lm_SM_Sun_cv))
+
+vif(lm_SM_Shade_cv)
+AIC(lm_SM_Shade_cv)
+plot(lm_SM_Shade_cv)
+qqnorm(resid(lm_SM_Shade_cv))
+```
+
+
+```{r}
+library(broom)
+
+res <- resid(lm_SM_Sun)
+idx <- order(abs(res), decreasing = TRUE)
+head(idx)
+LM_SM_Sun_df[idx[1:10], ]
 ```
 
 ```{r}
@@ -496,7 +558,9 @@ lm_SM_Shade_transformed <- lmer(mean_transformed
                   control = lmerControl(optimizer = "bobyqa"),
                   data = filter(SM_Shade_transformed, 
                                 Location == "Shade"))
+```
 
+```{r}
 anova(lm_SM_Sun_transformed)
 anova(lm_SM_Shade_transformed) 
 ```
@@ -541,7 +605,6 @@ residuals <- LM_SM_HourlyAvgsLong |>
 
 
 ```{r}
-
 lm_VPD <- lmer(log(mean) ~ Site * Month +
                             poly(Time, 4) + 
                     (1|Campus) + 
@@ -556,6 +619,11 @@ anova(lm_VPD)
 
 ```{r}
 qqnorm(resid(lm_VPD))
+plot(lm_VPD)
+
+
+boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Month)
+boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Site)
 
 simulationOutput <- simulateResiduals(fittedModel = lm_VPD, n = 500)
 plot(simulationOutput)#Plotting results

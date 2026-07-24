@@ -217,13 +217,21 @@ Temp_All <-
 write_xlsx(Temp_All, "Prelim Stat All 2026.xlsx")
 
 Temp_HourlyAvgsLong <- Temp_All |>
-  
-  #NOTE: comment out or in these lines for nighttime or daytime
-  #Night:
-  #filter(Time >= hms("20:00:00") | Time <= hms("06:30:00")) |>
-  #Day:
   filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
-  
+  pivot_longer(cols = c(Ambient, Sun, Shade), 
+               names_to = "Location", values_to = "Temperature") |>
+  group_by(Time, Site, Campus, Month, Location) |>
+  summarize(
+    mean = mean(Temperature, na.rm = TRUE),
+    sd   = sd(Temperature, na.rm = TRUE),
+    n    = sum(!is.na(Temperature)),
+    se   = sd(Temperature, na.rm = TRUE) / sqrt(sum(!is.na(Temperature))),
+    cv   = sd(Temperature, na.rm = TRUE) / mean(Temperature, na.rm = TRUE) * 100,
+    .groups = "drop_last") |>
+  ungroup() |> 
+  filter(n >= 3)
+
+Temp_HourlyAvgsLong_AllDay <- Temp_All |>
   pivot_longer(cols = c(Ambient, Sun, Shade), names_to = "Location", values_to = "Temperature") |>
   group_by(Time, Site, Campus, Month, Location) |>
   summarize(
@@ -234,12 +242,19 @@ Temp_HourlyAvgsLong <- Temp_All |>
     cv   = sd(Temperature, na.rm = TRUE) / mean(Temperature, na.rm = TRUE) * 100,
     .groups = "drop_last") |>
   ungroup() |> 
-  filter(n >= 3,
-         #!(Campus == "Cal Poly" & Month == "Mar")
-  )
+  filter(n >= 3)
 
 #Prep for lmer (not just for graphs)
 Temp_HourlyAvgs_lmer <- Temp_HourlyAvgsLong |>
+  filter(!is.na(mean)) |> 
+  mutate(Time = as.numeric(#hms(
+    Time#)
+                           )/3600, 
+         Site = as.factor(Site), 
+         Campus = as.factor(Campus),
+    Month = as.factor(Month))
+
+Temp_HourlyAvgs_lmer_AllDay <- Temp_HourlyAvgsLong_AllDay |>
   filter(!is.na(mean)) |> 
   mutate(Time = as.numeric(#hms(
     Time#)
@@ -252,14 +267,6 @@ Temp_HourlyAvgs_lmer <- Temp_HourlyAvgsLong |>
 
 ```{r models}
 #sun mean & cv
-# HourlyAvgs_glmer_SunMean <- glmer(mean ~ Site*Month + poly(Time,2) +
-#                                 (1|Campus) + (1|Site:Campus) + 
-#                                 (1|Month:Site:Campus),
-#                                 #REML = FALSE, 
-#                                 family = Gamma(link = "log"),
-#                                 data = filter(Temp_HourlyAvgs_lmer,
-#                                       Location == "Sun"))
-
 HourlyAvgs_lmer_SunMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
                                 (1|Campus) + (1|Site:Campus) + 
                                 (1|Month:Site:Campus),
@@ -302,20 +309,72 @@ HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
 ```
 
 
+```{r allday-models}
+HourlyAvgs_lmer_SunMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
+                                (1|Campus) + (1|Site:Campus) + 
+                                (1|Month:Site:Campus),
+                                REML = FALSE, 
+                                data = filter(Temp_HourlyAvgs_lmer_AllDay,
+                                      Location == "Sun"))
+HourlyAvgs_lmer_ShadeMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
+                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                  REML = FALSE, 
+                                  data = filter(Temp_HourlyAvgs_lmer_AllDay,
+                                      Location == "Shade"))
+HourlyAvgs_lmer_AmbMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
+                                  (1|Campus) + (1|Site:Campus) +
+                                  (1|Month:Site:Campus),
+                                REML = FALSE, 
+                                data = filter(Temp_HourlyAvgs_lmer_AllDay,
+                                      Location == "Ambient",
+                                      !Campus == "CSUSM"))
+```
+
+
 ```{r anova}
+#| message: False
 anova(HourlyAvgs_lmer_SunMean)
-Anova(HourlyAvgs_lmer_SunMean)
-summary(HourlyAvgs_lmer_SunMean)
+#summary(HourlyAvgs_lmer_SunMean)
+pairs(emmeans(HourlyAvgs_lmer_SunMean, specs = ~ Site|Month))
+
+anova(HourlyAvgs_lmer_SunCV)
+#summary(HourlyAvgs_lmer_SunMean)
+pairs(emmeans(HourlyAvgs_lmer_SunCV, specs = ~ Site|Month))
+```
 
 
+```{r anova}
+#| message: False
 anova(HourlyAvgs_lmer_ShadeMean)
-Anova(HourlyAvgs_lmer_ShadeMean)
-summary(HourlyAvgs_lmer_ShadeMean)
+#summary(HourlyAvgs_lmer_ShadeMean)
+pairs(emmeans(HourlyAvgs_lmer_ShadeMean, specs = ~ Site|Month))
 
+anova(HourlyAvgs_lmer_ShadeCV)
+#summary(HourlyAvgs_lmer_ShadeCV)
+pairs(emmeans(HourlyAvgs_lmer_ShadeCV, specs = ~ Site|Month))
+```
+
+
+```{r anova}
+#| message: False
 anova(HourlyAvgs_lmer_AmbMean)
-Anova(HourlyAvgs_lmer_AmbMean)
-summary(HourlyAvgs_lmer_AmbMean)
-#pairs(emmeans(HourlyAvgs_lmer_*****Mean, specs = ~ Site|Month, adjust = "sidak"))
+#summary(HourlyAvgs_lmer_AmbMean)
+#pairs(emmeans(HourlyAvgs_lmer_AmbMean, specs = ~ Site|Month, adjust = "tukey")) Not valid
+
+anova(HourlyAvgs_lmer_AmbCV)
+#summary(HourlyAvgs_lmer_ShadeCV)
+pairs(emmeans(HourlyAvgs_lmer_AmbCV, specs = ~ Site|Month))
+```
+
+```{r anova-allday}
+anova(HourlyAvgs_lmer_SunMean_AllDay)
+#summary(HourlyAvgs_lmer_SunMean)
+
+anova(HourlyAvgs_lmer_ShadeMean_AllDay)
+#summary(HourlyAvgs_lmer_ShadeMean)
+
+anova(HourlyAvgs_lmer_AmbMean_AllDay)
+#summary(HourlyAvgs_lmer_AmbMean)
 ```
 
 
@@ -324,6 +383,10 @@ qqnorm(resid(HourlyAvgs_lmer_SunMean))
 hist(resid(HourlyAvgs_lmer_SunMean))
 plot(HourlyAvgs_lmer_SunMean)
 # check_model(HourlyAvgs_lmer_SunMean)
+
+qqnorm(resid(HourlyAvgs_lmer_SunCV))
+hist(resid(HourlyAvgs_lmer_SunCV))
+plot(HourlyAvgs_lmer_SunCV)
 ```
 
 
@@ -331,12 +394,20 @@ plot(HourlyAvgs_lmer_SunMean)
 qqnorm(resid(HourlyAvgs_lmer_ShadeMean))
 hist(resid(HourlyAvgs_lmer_ShadeMean))
 plot(HourlyAvgs_lmer_ShadeMean)
+
+qqnorm(resid(HourlyAvgs_lmer_ShadeCV))
+hist(resid(HourlyAvgs_lmer_ShadeCV))
+plot(HourlyAvgs_lmer_ShadeCV)
 ```
 
 ```{r check-ambient-model}
 qqnorm(resid(HourlyAvgs_lmer_AmbMean))
 hist(resid(HourlyAvgs_lmer_AmbMean))
 plot(HourlyAvgs_lmer_AmbMean)
+
+qqnorm(resid(HourlyAvgs_lmer_AmbCV))
+hist(resid(HourlyAvgs_lmer_AmbCV))
+plot(HourlyAvgs_lmer_AmbCV)
 ```
 
 
@@ -459,7 +530,94 @@ ggplot() +
         axis.text = element_text(size = 14),
         strip.text = element_text(size = 16),
         legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)
+        legend.title = element_text(size = 18))
+
 ```
 
+
+
+
+
+
+```{r}
+safe_max <- function(x) {
+  if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)}
+safe_min <- function(x) {
+  if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)}
+safe_mean <- function(x) {
+  if (all(is.na(x))) NA_real_ else mean(x, na.rm = TRUE)}
+
+Monthly_MinMax <- Temp_All %>%
+  group_by(Campus, Site, Month, MonthDayYear) %>%
+  summarise(
+    across(
+      c(Ambient, Sun, Shade),
+      list(
+        max = safe_max,
+        min = safe_min),
+      .names = "{.col}_{.fn}"),
+    .groups = "drop") %>%
+  group_by(Campus, Site, Month) %>%
+  summarise(
+    across(
+      ends_with(c("_max", "_min")),
+      safe_mean),
+    .groups = "drop")
+
+```
+
+
+```{r}
+SunMax_lmer <- lmer(Sun_max ~ Site*Month +
+                             (1|Campus) + (1|Site:Campus),
+                             REML = FALSE, 
+                            data = Monthly_MinMax)
+SunMin_lmer <- lmer(Sun_min ~ Site*Month +
+                            (1|Campus) + (1|Site:Campus),
+                            REML = FALSE, 
+                            data = Monthly_MinMax)
+ShadeMax_lmer <- lmer(Shade_max ~ Site*Month +
+                            (1|Campus) + (1|Site:Campus),
+                            REML = FALSE, 
+                            data = Monthly_MinMax)
+ShadeMin_lmer <- lmer(Shade_min ~ Site*Month +
+                            (1|Campus) + (1|Site:Campus),
+                            REML = FALSE, 
+                            data = Monthly_MinMax)
+AmbientMax_lmer <- lmer(Ambient_max ~ Site*Month +
+                            (1|Campus) + (1|Site:Campus),    
+                            REML = FALSE, 
+                            data = Monthly_MinMax)
+AmbientMin_lmer <- lmer(Ambient_min ~ Site*Month +
+                            (1|Campus) + (1|Site:Campus),
+                            REML = FALSE, 
+                            data = Monthly_MinMax)
+```
+
+```{r}
+plot(SunMax_lmer)
+qqnorm(resid(SunMax_lmer))
+hist(resid(SunMax_lmer))
+
+plot(SunMin_lmer)
+qqnorm(resid(SunMin_lmer))
+hist(resid(SunMin_lmer))
+
+plot(ShadeMax_lmer)
+qqnorm(resid(ShadeMax_lmer))
+hist(resid(ShadeMax_lmer))
+
+plot(ShadeMin_lmer)
+qqnorm(resid(ShadeMin_lmer))
+hist(resid(ShadeMin_lmer))
+
+plot(AmbientMax_lmer)
+qqnorm(resid(AmbientMax_lmer))
+hist(resid(AmbientMax_lmer))
+
+plot(AmbientMin_lmer)
+qqnorm(resid(AmbientMin_lmer))
+hist(resid(AmbientMin_lmer))
+
+```
 
