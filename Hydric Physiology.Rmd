@@ -287,34 +287,38 @@ Lizard_Master[Lizard_Master$LizardID == "UCLA_OFF_9"
               & Lizard_Master$Season == "Fall", "Condition"] <- NA
 Lizard_Master[Lizard_Master$LizardID == "UCLA_ON_5"
               & Lizard_Master$Season == "Fall", "Condition"] <- NA
-Lizard_Master[Lizard_Master$LizardID == "CSUSB_ON_8"
-              & Lizard_Master$Season == "Fall", "Condition"] <- NA
-Lizard_Master[Lizard_Master$LizardID == "CP_OFF_5"
-              & Lizard_Master$Season == "Spring", "Condition"] <- NA
+# Lizard_Master[Lizard_Master$LizardID == "CSUSB_ON_8"
+#               & Lizard_Master$Season == "Fall", "Condition"] <- NA
+# Lizard_Master[Lizard_Master$LizardID == "CP_OFF_5"
+#               & Lizard_Master$Season == "Spring", "Condition"] <- NA
 
 ```
 
 
 ```{r}
-options(na.action = "na.omit")
+# options(na.action = "na.omit")
 # 
 CEWL_data_clean <- Lizard_Master |>
   select(CEWL_mean, Season, Site, Condition, Lab_VPD, SexGravid, Campus, Posm_mean) |>
   drop_na()
 # 
-# Posm_data_clean <- Lizard_Master |>
-#   select(Posm_mean, Season, Site, Condition, SexGravid, Campus) |>
-#   drop_na()
+Posm_data_clean <- Lizard_Master |>
+  select(Posm_mean, Season, Site, Condition, SexGravid, Campus) |>
+  drop_na()
 # 
 # Hem_data_clean <- Lizard_Master |>
 #   select(Hematocrit, Season, Site, Condition, SexGravid, Campus) |>
 #   drop_na()
 # 
 lmer_CEWL_dredge <- lmer(CEWL_mean ~
-                      Season*Site + Season*Condition + Site*Condition +
-                      Posm_mean +
+                      Season + Site + Condition + scale(Posm_mean) +
+                      Site:Season + Site:Condition + Season:Condition +
+                      scale(Posm_mean):Site + 
+                      # scale(Posm_mean):Condition + 
+                      # scale(Posm_mean):Season +
+                      # Season:Condition:scale(Posm_mean):Site +
                       Lab_VPD + SexGravid +
-                      (1|Campus) + (1|Season:Campus),
+                      (1|Campus) + (1|Site:Campus),
                       data = CEWL_data_clean, REML = F)
 
 
@@ -337,12 +341,12 @@ lmer_Posm_dredge <- lmer(Posm_mean ~
 library(MuMIn)
 options(na.action = "na.fail")
 dredge_fit_CEWL <- dredge(lmer_CEWL_dredge)
-# dredge_fit_Posm <- dredge(lmer_Posm_dredge)
-# dredge_fit_Hem <- dredge(lmer_Hemato_dredge)
-# 
+# # dredge_fit_Posm <- dredge(lmer_Posm_dredge)
+# # dredge_fit_Hem <- dredge(lmer_Hemato_dredge)
+# # 
 subset(dredge_fit_CEWL, delta < 2)
-subset(dredge_fit_CEWL, sort(decending = AIC))
-dredge_fit_CEWL[order(dredge_fit_CEWL$AICc), ]
+# subset(dredge_fit_CEWL, sort(decending = AIC))
+# dredge_fit_CEWL[order(dredge_fit_CEWL$AICc), ]
 # subset(dredge_fit_Posm, delta < 2)
 # subset(dredge_fit_Hem, delta < 2)
 #options(na.action = "na.omit")
@@ -353,27 +357,37 @@ dredge_fit_CEWL[order(dredge_fit_CEWL$AICc), ]
 options(na.action = "na.omit")
 # Season*Site + Season*Condition + Site*Condition
 lmer_CEWL <- lmer(CEWL_mean ~ 
-                  #Season*Site*Condition +
-                  Season*Site + Season*Condition + Site*Condition +
-                   #Season*Site + Season*scale(Condition) +
-                   #scale(Posm_mean)*Site + scale(Posm_mean)*Season +
-                  Posm_mean +
-                  Lab_VPD + SexGravid +
-                  (1|Campus) + (1|Season:Campus)
-                  #+ (1|Season:Site:Campus)   
-                 # Season:Site:Campus had a VarCorr() stdDev of 0, contributing essentially nothing to the model. Thus, it was removed
-                  ,
-                  data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+                  scale(Posm_mean) + Site +
+                  Season*Condition +
+                  Season:scale(Posm_mean):Site +
+                  Lab_VPD + SexGravid  +
+                 (1|Campus) + (1|Season:Campus)
+                  #+ (1|Site:Campus)  
+                 # (1|Site:Campus) had a VarCorr() stdDev of 0, contributing essentially nothing to the model. Thus, it was removed
+                  , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+
+
+lmer_CEWL <- lmer(CEWL_mean ~ 
+                    Season + Site + Condition + scale(Posm_mean) +
+                    # Site:Season + #Either or!
+                    #Site:Condition + #Either or!
+                    Season:Condition +   
+                    Lab_VPD + SexGravid +
+                    (1|Campus) + (1|Season:Campus)
+                  , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+
+
+
 anova(lmer_CEWL) 
 pairs(emmeans(lmer_CEWL, specs = ~ Site|Season))
 pairs(emmeans(lmer_CEWL, specs = ~ SexGravid))
 
 lmer_Posm <- lmer(Posm_mean ~ 
-                  Season * Condition * Site +
+                  Site +
+                  Season * Condition +
                   #Season*Site + Season*Condition + Site*Condition + #Unused as of now
                   SexGravid +
                   (1|Site:Campus) + (1|Season:Campus)
-                 #+ (1|Campus)   
                  #+ #1|Campus had a VarCorr() stdDev of 0, contributing essentially nothing to the model and causing "boundary (singular) fit". Thus, it was removed
                   ,
                   data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
@@ -382,12 +396,11 @@ pairs(emmeans(lmer_Posm, specs = ~ Site))
 emtrends(lmer_Posm, pairwise ~ Season, var = "Condition")
 
 lmer_Hem <- lmer(Hematocrit ~ 
-                   Season*Site*Condition +
+                 Season*Site*Condition +
                 # Season*Site + Season*Condition + Site*Condition + #Unused
                  SexGravid + 
-                 (1|Campus) + (1|Season:Campus)
-                 # + (1|Season:Site:Campus)
-                 #+ (1|Season:Site:Campus)   #1|Campus had a VarCorr() stdDev of 0, contributing essentially nothing to the model and causing "boundary (singular) fit". Thus, it was removed
+                 (1|Campus) + (1|Season:Campus) + (1|Site:Campus)
+                 # had a VarCorr() stdDev of 0, contributing essentially nothing to the model and causing "boundary (singular) fit". Thus, it was removed
                  ,
                  data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
 anova(lmer_Hem)
@@ -396,11 +409,13 @@ emtrends(lmer_Hem,
          ~ Season * Site,
          var = "Condition")
       
-# lmer_Con <- lmer(Condition ~ 
-#                  Season*Site + SexGravid + 
-#                  (1|Site:Campus) + (1|Season:Campus),
-#                  data = filter(Lizard_Master, !is.na(Condition)), REML = F)
-# anova(lmer_Con)
+lmer_Con <- lmer(Condition ~
+                 Season + Site + SexGravid +
+                 scale(Posm_mean) +
+                 Hematocrit +
+                 (1|Site:Campus) + (1|Campus),
+                 data = filter(Lizard_Master, !is.na(Condition)), REML = F)
+anova(lmer_Con)
 
 ```
 

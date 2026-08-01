@@ -418,12 +418,14 @@ LM_SM_Shade_df <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Shade", Campus != "UCLA")
   
 SM_Sun_transformed <- LM_SM_HourlyAvgsLong |>
-  filter(Location == "Sun") |>
-  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 0.001)
+  filter(Location == "Sun", 
+         Campus != "UCLA") |> 
+  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 1)
 
 SM_Shade_transformed <- LM_SM_HourlyAvgsLong |>
-  filter(Location == "Shade") |>
-  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 0.001)
+  filter(Location == "Shade", 
+         Campus != "UCLA") |> 
+  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 1)
 #   
 #          mean_transformed = case_when(Location == "Shade" ~ mean +
 #                                         min(filter(LM_SM_HourlyAvgsLong$mean, 
@@ -460,7 +462,7 @@ lm_SM_Sun <- lmer(mean ~ Site * Month +
                   , 
                   REML = FALSE,
                   control = lmerControl(optimizer = "bobyqa"),
-                  data = LM_SM_Sun_df)
+                  data = SM_Sun_transformed)
 
 lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
                       #Time +
@@ -470,7 +472,7 @@ lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
                   , 
                   REML = FALSE, 
                   control = lmerControl(optimizer = "bobyqa"),
-                  data = LM_SM_Shade_df)
+                  data = SM_Shade_transformed)
 # lm_SM_Sun_cv <- lmer(cv ~ Site * Month +
 #                             poly(Time,2) +
 #                     #Time +
@@ -579,9 +581,9 @@ qqnorm(resid(lm_SM_Shade))
 
 
 AIC(lm_SM_Sun_transformed)
-plot(lm_SM_Sun_transformed)
+plot(lm_VPD)
 plot(lm_SM_Shade_transformed)
-qqnorm(resid(lm_SM_Sun_transformed))
+qqnorm(resid(lm_VPD))
 qqnorm(resid(lm_SM_Shade_transformed))
 
 summary(lm_SM_Shade)
@@ -605,10 +607,11 @@ residuals <- LM_SM_HourlyAvgsLong |>
 
 
 ```{r}
-lm_VPD <- lmer(log(mean) ~ Site * Month +
-                            poly(Time, 4) + 
+lm_VPD <- lmer((mean^(1/4)) ~ 
+                    Site * Month +
+                    poly(Time, 4) + 
                     (1|Campus) + 
-                    (1|Site:Campus) + (1|Month:Site:Campus), 
+                    (1|Site:Campus), 
                   REML = FALSE,
                   control = lmerControl(optimizer = "bobyqa"),
                   data = LM_VPD_HourlyAvgsLong)
