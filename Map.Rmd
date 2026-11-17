@@ -1,0 +1,81 @@
+---
+title: "Map"
+author: "StellaRaymond"
+date: "2026-08-04"
+output: html_document
+---
+
+```{r library, include = FALSE}
+#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+required_packages <-function(...) { 
+  libs<-unlist(list(...)) 
+  req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
+  need<-libs[req==FALSE] 
+  if(length(need)>0){ 
+    install.packages(need, repos = "http://cran.us.r-project.org") 
+    lapply(need, library, character.only=TRUE) 
+  }
+  else{message("No packages required installation.")} 
+}
+
+required_packages("tidyverse", "sf", "terrainr", "ggrepel", "ggspatial")
+
+sites <- data.frame(
+  Campus = c(
+    "SDSU", "CSUSM", "CSUSB", "CSULB", "Cal Poly", "UCLA",
+    "Whittier","Scripps & Pitzer", "HMC", "CLU", "Pepperdine"),
+  Latitude  = c(
+    32.77466, 33.12919, 34.18227, 33.78210, 35.30927, 34.07142,
+    33.97764, 34.10376, 34.10604, 34.22781, 34.04022),
+  Longitude = c(
+    -117.07259, -117.15697, -117.31864, -118.11464, -120.66155,
+    -118.44289, -118.02909, -117.71214, -117.70854, -118.87794,
+    -118.70718)
+)
+```
+
+
+```{r}
+lizard_geo <- st_as_sf(sites,
+                       coords = c(x = "Longitude",
+                                  y = "Latitude"),
+                       crs = "WGS84")
+
+lizard_geo_buf <- lizard_geo |> 
+  st_buffer(dist = 2000)
+
+lizard_tiles <- get_tiles(lizard_geo_buf, 
+                          services = "USGSTopo", 
+                          resolution = 200) 
+
+ggplot() +
+  geom_spatial_rgb(data = lizard_tiles$USGSTopo, 
+                   mapping = aes(x, y, r = red, g = green, b = blue)) +
+  geom_sf(data = lizard_geo, alpha = .75) +
+  labs(x = "Longitude",
+       y = "Latitude") +
+  geom_label_repel(data = sites, 
+                   aes(label = Campus, x = Longitude, y = Latitude), 
+                   size = 5, box.padding = .5) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.25, 
+    pad_x = unit(1, "cm"),
+    pad_y = unit(1, "cm")
+    ) +
+  annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    style = north_arrow_fancy_orienteering, 
+    pad_x = unit(.5, "cm"),
+    pad_y = unit(1, "cm")) +
+  scale_x_continuous(n.breaks = 5) +
+  theme_classic() +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    plot.caption = element_text(size = 13))
+```

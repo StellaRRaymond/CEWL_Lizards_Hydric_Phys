@@ -1,3 +1,4 @@
+
 #HOBO soil moisture sensors (especially the S-SMC-M005 and related capacitance-based probes) are known to produce slightly negative volumetric water content estimates under very dry conditions, particularly when:
 
 ggplot(#filter(
@@ -67,3 +68,104 @@ ggplot(filter(
   aes(x = Time, y = mean, color = Month)) +
   facet_wrap(~(Site)) +
   geom_point()
+
+
+library("glmmTMB")
+library("car")
+library("splines")
+
+LM_SM_Sun_Zeros_df
+
+Zeros_Sun <- glmmTMB(
+  mean ~ Site * Month + poly(Time,2) + 
+    (1|Campus) + (1|Site:Campus) +  (1|Month:Site:Campus),
+  # ziformula = ~ Site * Month + poly(Time,2) + 
+  #   (1|Campus) + (1|Site:Campus) +  (1|Month:Site:Campus),
+  dispformula = ~ poly(Time,2),
+  family = tweedie(link = "log"),
+  control = glmmTMBControl(
+    optCtrl = list(
+      iter.max = 10000,
+      eval.max = 10000
+    )),
+  data = LM_SM_Sun_Zeros_df
+)
+
+Anova(Zeros_Sun)
+
+emm_site <- emmeans(Zeros_Sun, ~ Site, type = "response")
+pairs(emm_site)
+
+
+library("performance")
+checklist <- c("normality","qq","linearity","homogeneity")
+check_model(Zeros_Sun,check=checklist)
+library("DHARMa")
+Zeros_Sun_dharma <- simulateResiduals(fittedModel = Zeros_Sun,
+  n = 2000, simulateREs = "conditional",
+  refit = FALSE, plot = FALSE, seed = 2314)
+
+plot(Zeros_Sun_dharma)
+
+testUniformity(Zeros_Sun_dharma)
+testQuantiles(Zeros_Sun_dharma)
+testDispersion(Zeros_Sun_dharma)
+testZeroInflation(Zeros_Sun_dharma)
+testOutliers(Zeros_Sun_dharma)
+
+
+
+
+
+
+
+
+##Diagnostic for Soil Moisture LMs
+
+filtered_SM_sun <- filter(LM_SM_HourlyAvgsLong, Location == "Sun")
+summary(filtered_SM_sun$mean)
+#minimum is -0.03491
+
+filtered_SM_shade <- filter(LM_SM_HourlyAvgsLong, Location == "Shade")
+summary(filtered_SM_shade$mean)
+#minimum is -0.053715
+
+LM_SM_Shade_transformed_df_1 <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Shade", Campus != "UCLA") |> 
+  mutate(mean_transformed = mean + 1)
+
+LM_SM_Shade_transformed_df_0.1 <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Shade", Campus != "UCLA") |> 
+  mutate(mean_transformed = mean + .1)
+
+LM_SM_Shade_transformed_df_0.06 <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Shade", Campus != "UCLA") |> 
+  mutate(mean_transformed = mean + .06)
+
+lm_SM_Sun_1 <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) + 
+                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus), 
+                  REML = FALSE, control = lmerControl(optimizer = "bobyqa"),
+                  data = LM_SM_Shade_transformed_df_1)
+lm_SM_Sun_0.1 <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) + 
+                      (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus), 
+                    REML = FALSE, control = lmerControl(optimizer = "bobyqa"),
+                    data = LM_SM_Shade_transformed_df_0.1)
+lm_SM_Sun_0.06 <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) + 
+                        (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus), 
+                      REML = FALSE, control = lmerControl(optimizer = "bobyqa"),
+                      data = LM_SM_Shade_transformed_df_0.06)
+
+plot(lm_SM_Sun_1) #performs marginally better than the rest
+plot(lm_SM_Sun_0.1) #performs marginally worse, with a slight fanning at the 0s
+plot(lm_SM_Sun_0.06) #performs the worst
+
+qqnorm(resid(lm_SM_Sun_1)) #performs marginally better than the rest
+qqnorm(resid(lm_SM_Sun_0.1)) #performs marginally worse, with more curvature
+qqnorm(resid(lm_SM_Sun_0.06)) #performs the worst
+
+library(performance)
+library(see)
+checklist <- c("normality","qq","linearity","homogeneity")
+check_model(lm_SM_Sun_1,check=checklist)
+check_model(lm_SM_Sun_0.1,check=checklist)
+check_model(lm_SM_Sun_0.06,check=checklist)

@@ -5,7 +5,8 @@ date: "2026-05-16"
 output: pdf_document
 ---
 
-```{r setup, warning = FALSE}
+```{r}
+#| warning: False
 #The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
 required_packages <-function(...) { 
   libs<-unlist(list(...)) 
@@ -18,11 +19,14 @@ required_packages <-function(...) {
   else{message("No packages required installation.")} 
 }
 
-required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans")
+okabe_ito <- c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans", "glmmTMB", "car")
 ```
 
 
-```{r setup}
+```{r}
 #for VPD later
 Temp_All <- read_xlsx("Prelim Stat All 2026.xlsx")
 #Soil Moisture
@@ -99,11 +103,13 @@ SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","S
   mutate(Month = month(DateTime, label = T, abbr = T),
          Time = hms(format(DateTime, "%H:%M:%S"))) |> 
   filter(!Month %in% c("Feb", "Oct", "Nov"))
+```
 
 
+```{r}
 VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
                      col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-  select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+  dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
   pivot_longer(
     cols = -DateTime,
     names_to = c("Site", "Variable"),
@@ -118,7 +124,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/CSUSM/CSUSM Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-            select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+            dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -134,7 +140,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/Pepperdine/Pepperdine Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |> 
+              dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |> 
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -149,7 +155,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/Scripps/Scripps Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -164,7 +170,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/Whittier/Whittier Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-      select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+      dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -179,7 +185,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/CSUSB/CSUSB Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-      select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+      dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -194,7 +200,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/CSULB/CSULB Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -209,7 +215,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/UCLA/UCLA Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -224,7 +230,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
   full_join(
     read_xlsx(path = "Abiotics/CLU/CLU Master.xlsx","RH",
               col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
-              select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
+              dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
               pivot_longer(
                 cols = -DateTime,
                 names_to = c("Site", "Variable"),
@@ -243,7 +249,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
 ```
 
 
-```{r filter}
+```{r}
 VPD_All <- VPD_All_Inported |> 
   #Removed only because it was removed from the other data set (an is likely sunned off)
   filter(!(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-05-2025 12:30:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
@@ -259,104 +265,21 @@ VPD_All <- VPD_All_Inported |>
          #!(Campus == "Pepperdine" & Site == "On" & DateTime > as.POSIXct("2025-08-17 00:00:00"))
          ) |> 
   left_join(
-    select(Temp_All, !c("Sun", "Shade", "Time", "Time_sec", "Season")), 
+    dplyr::select(Temp_All, !c("Sun", "Shade", "Time", "Time_sec", "Season")), 
             by = c("Campus", "DateTime", "Site", "Month", "MonthDayYear")) |> 
-  select(!c("Temp", "VPD")) |> 
+  dplyr::select(!c("Temp", "VPD")) |> 
   mutate(es = (.611 * (exp((17.502 * Ambient )/(Ambient + 240.97)))),
          ea = es * (RH/100),
          VPD = es - ea)
 
 # df_filtered_unequal <- subset(VPD_All, round(Temp, 5) != round(Ambient, 5)) |> 
-#   select(Temp, Ambient) 
+#   dplyr::select(Temp, Ambient) 
 # This code validated that I should use Ambient loggers instead because when I inputted the data into the spreadsheet, some of the temperature values were calibrated and some were not. As a result, I just imported the calibrated values. 
 
 ```
 
 
-```{r calibrate-filter-prepare}
-SM_All <- SM_All_PrecCalib |>
-  mutate(
-    SM = case_when(
-      Campus == "Cal Poly" & Site == "Off" & Location == "Shade"
-      ~ SM*0.7626512473	+ 0.1157975606,
-      Campus == "Cal Poly" & Site == "Off" & Location == "Sun" 
-      ~ SM*0.9208141931	+ 0.06409380004,
-      Campus == "Cal Poly" & Site == "On" & Location == "Shade"
-      ~ SM*0.927229213 + 0.1055328493,
-      Campus == "Cal Poly" & Site == "On" & Location == "Sun"
-      ~ SM*0.8714872975	+ 0.1059928176,
-  #Commented out Off_Shade because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
-      # Campus == "CSUSB" & Site == "Off" & Location == "Shade"
-      # ~ SM*1.147883049 - 0.07195710998,
-      Campus == "CSUSB" & Site == "Off" & Location == "Sun" 
-      & DateTime < ymd("2025-04-02")
-      ~ SM*0.9449593421 +	0.04963067249,
-  #Commented out On_Shade because calibration made it dip far below zero, exceeding -1 at times when previously above 0
-      # Campus == "CSUSB" & Site == "On" & Location == "Shade"
-      # ~ SM*1.054337754 - 0.04200089063,
-  #I have reason to believe this calibration may be invalid and thus it was commented out. Commented out On_Sun because calibration made it dip far below zero, exceeding -1 at times when previously above 0
-      # Campus == "CSUSB" & Site == "On" & Location == "Sun"
-      # ~ SM*1.063970956 - 0.05517880129,
-      Campus == "UCLA" & Site == "Off" & Location == "Shade"
-      ~ SM*1.00754774	- 0.004184319254,
-      Campus == "UCLA" & Site == "Off" & Location == "Sun"
-      ~ SM*1.127664165 - 0.05965336487,
-  #I have reason to believe this calibration may be invalid and thus it was commented out. exceeded -0.2 once calibrated!
-      # Campus == "UCLA" & Site == "On" & Location == "Shade"
-      # ~ SM*(1.794141579) - 0.1880992677,
-  #All 4 whittier soil moisture probes dip far below 0 and either meet or exceed -.1
-      # Campus == "Whittier" & Site == "Off" & Location == "Shade"
-      # ~ SM*1.294021546 - 0.1041101845,
-      # Campus == "Whittier" & Site == "Off" & Location == "Sun"
-      # ~ SM*1.089305032 - 0.04532633929,
-      # Campus == "Whittier" & Site == "On" & Location == "Shade"
-      # ~ SM*1.284492549 - 0.1269630441,
-      # Campus == "Whittier" & Site == "On" & Location == "Sun"
-      # ~ SM*1.209386722 - 0.0831184615,
-      Campus == "Scripps" & Site == "Off" & Location == "Shade"
-      ~ SM*1.11785729	- 0.04209083718,
-  #I have reason to believe this calibration may be invalid and thus it was commented out. Off_Sun  calibration made it dip far below zero, exceeding far below -1 when previously only just below 0
-      # Campus == "Scripps" & Site == "Off" & Location == "Sun"
-      # ~ SM*1.222856632 - 0.08809597617,
-      Campus == "Scripps" & Site == "On" & Location == "Shade"
-      ~ SM*1.063832017 - 0.02247110766,
-      Campus == "Scripps" & Site == "On" & Location == "Sun" 
-      ~ SM*1.180382915 - 0.05355395931,
-      Campus == "Pepperdine" & Site == "Off" & Location == "Shade"
-      ~ SM*1.033528382 - 0.01518944759,
-      Campus == "Pepperdine" & Site == "Off" & Location == "Sun"
-      ~ SM*0.9345619796 - 0.02029910189,
-      Campus == "Pepperdine" & Site == "On" & Location == "Shade"
-      ~ SM*0.9942100727	+ 0.01308747899,
-  #Commented out On_Sun because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
-      # Campus == "Pepperdine" & Site == "On" & Location == "Sun" 
-      # ~ SM*1.119365525 - 0.0598695355,
-      Campus == "CLU" & Site == "Off" & Location == "Shade"
-      ~ SM*0.8026575529	+ 0.09798414304,
-      Campus == "CLU" & Site == "Off" & Location == "Sun"
-      ~ SM*0.8284017489	+ 0.08671550135,
-      Campus == "CLU" & Site == "On" & Location == "Shade"
-      ~ SM*0.7075278588	+ 0.1050748847,
-      Campus == "CLU" & Site == "On" & Location == "Sun" 
-      ~ SM*0.7596081387	+ 0.1262780708,
-      #No Off_Sun for CSULB because it was chewed through early on
-      Campus == "CSULB" & Site == "Off" & Location == "Sun"
-      ~ SM*1.050806961	- 0.04829162008, 
-  #Commented out Off_Shade because calibration made it dip far below zero, nearly exceeding -1 when previously above 0
-      # Campus == "CSULB" & Site == "Off" & Location == "Shade"
-      # ~ SM*1.219979101 - 0.08724627315,
-  #Commented out On_Shade because calibration made it dip far below zero when previously above 0
-      # Campus == "CSULB" & Site == "On" & Location == "Shade"
-      # ~ SM*1.455172923 - 0.1876963955,
-      Campus == "CSULB" & Site == "On" & Location == "Sun" 
-      ~ SM*1.181175115 - 0.07712122048,
-      TRUE ~ SM
-    ))
-# NoCali_Test <- SM_All_PrecCalib |>
-```
-
-
-```{r filter-prepare}
+```{r}
 #SM_HourlyAvgsLong <- SM_All |>
 SM_HourlyAvgsLong <-SM_All_PrecCalib |>
 # SM_HourlyAvgsLong <- NoCali_Test |> 
@@ -366,13 +289,8 @@ SM_HourlyAvgsLong <-SM_All_PrecCalib |>
          !(Campus =="Whittier" & Site == "On" & Location == "Sun" & 
              DateTime > as.POSIXct("2025-09-05 08:00:00") & 
              DateTime < as.POSIXct("2025-09-09 00:00:00"))) |> 
-  
-  #NOTE: comment out or in these lines for nighttime or daytime
-  #Night:
-  #filter(Time >= hms("20:00:00") | Time <= hms("06:30:00")) |>
   #Day:
-  #filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
-    
+  filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
   group_by(Time, Site, Campus, Month, Location) |>
   summarize(
     mean = mean(SM, na.rm = TRUE),
@@ -386,6 +304,7 @@ SM_HourlyAvgsLong <-SM_All_PrecCalib |>
 #!(Campus == "Cal Poly" & Month == "Mar")
 
 VPD_HourlyAvgsLong <- VPD_All |> 
+  filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
   group_by(Time, Site, Campus, Month) |>
   summarize(
     mean = mean(VPD, na.rm = TRUE),
@@ -403,13 +322,15 @@ LM_SM_HourlyAvgsLong <- SM_HourlyAvgsLong |>
          Site = factor(Site),
          Campus = factor(Campus),
          Location = factor(Location),
-         Month = factor(Month, levels = month.abb[3:9]))
+         Month = factor(Month, levels = month.abb[3:9]))|> 
+  filter(Time <= 20 & Time >= 6.5)
 
 LM_VPD_HourlyAvgsLong <- VPD_HourlyAvgsLong |> 
   mutate(Time = as.numeric(Time)/3600,
          Site = factor(Site),
          Campus = factor(Campus),
-         Month = factor(Month, levels = month.abb[3:9]))
+         Month = factor(Month, levels = month.abb[3:9]))|> 
+  filter(Time <= 20 & Time >= 6.5)
 
 LM_SM_Sun_df <- LM_SM_HourlyAvgsLong |> 
   filter(Location == "Sun", Campus != "UCLA")
@@ -417,16 +338,26 @@ LM_SM_Sun_df <- LM_SM_HourlyAvgsLong |>
 LM_SM_Shade_df <- LM_SM_HourlyAvgsLong |> 
   filter(Location == "Shade", Campus != "UCLA")
   
-SM_Sun_transformed <- LM_SM_HourlyAvgsLong |>
+LM_SM_Sun_transformed_df <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun", 
          Campus != "UCLA") |> 
-  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 1)
+  mutate(mean_transformed = mean + 1)
 
-SM_Shade_transformed <- LM_SM_HourlyAvgsLong |>
+LM_SM_Shade_transformed_df <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Shade", 
          Campus != "UCLA") |> 
-  mutate(mean_transformed = mean - min(mean, na.rm = TRUE) + 1)
-#   
+  mutate(mean_transformed = mean + 1)
+
+LM_SM_Sun_Zeros_df <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Sun", 
+         Campus != "UCLA") |> 
+  mutate(mean = ifelse(mean <= 0, 0, mean))
+
+LM_SM_Shade_Zeros_df <- LM_SM_HourlyAvgsLong |>
+  filter(Location == "Shade", 
+         Campus != "UCLA") |> 
+  mutate(mean = ifelse(mean <= 0, 0, mean))
+   
 #          mean_transformed = case_when(Location == "Shade" ~ mean +
 #                                         min(filter(LM_SM_HourlyAvgsLong$mean, 
 #                                                    Location == "Shade")), 
@@ -437,8 +368,8 @@ SM_Shade_transformed <- LM_SM_HourlyAvgsLong |>
 ```
 
 
-```{r timeline}
-SM_All |>
+```{r}
+SM_All_PrecCalib |>
   group_by(Campus) |>
   summarize(
     first_date = min(DateTime, na.rm = TRUE),
@@ -452,27 +383,29 @@ VPD_All |>
 ```
 
 ##SM Models
-```{r models}
-lm_SM_Sun <- lmer(mean ~ Site * Month +
-                            poly(Time,2) + 
-                    #Time +
-                    (1|Campus) + 
-                    (1|Site:Campus) +
-                    (1|Month:Site:Campus)
-                  , 
-                  REML = FALSE,
-                  control = lmerControl(optimizer = "bobyqa"),
-                  data = SM_Sun_transformed)
-
-lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
-                      #Time +
-                    (1|Campus) + 
-                    (1|Site:Campus) +
-                   (1|Month:Site:Campus)
-                  , 
-                  REML = FALSE, 
-                  control = lmerControl(optimizer = "bobyqa"),
-                  data = SM_Shade_transformed)
+```{r}
+# Models used prior to the zero-transformation model. No longer in use
+# lm_SM_Sun <- lmer(log(mean_transformed) ~ Site * Month +
+#                             poly(Time,2) + 
+#                     #Time +
+#                     (1|Campus) + 
+#                     (1|Site:Campus) +
+#                     (1|Month:Site:Campus)
+#                   , 
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Sun_transformed_df)
+# 
+# lm_SM_Shade <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) +
+#                       #Time +
+#                     (1|Campus) + 
+#                     (1|Site:Campus) +
+#                     (1|Month:Site:Campus)
+#                   , 
+#                   REML = FALSE, 
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Shade_transformed_df)
+# 
 # lm_SM_Sun_cv <- lmer(cv ~ Site * Month +
 #                             poly(Time,2) +
 #                     #Time +
@@ -482,9 +415,9 @@ lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
 #                   ,
 #                   REML = FALSE,
 #                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Sun_df)
+#                   data = LM_SM_Sun_transformed_df)
 # 
-# lm_SM_Shade_cv <- lmer(log(cv) ~ Site * Month + poly(Time,2) +
+# lm_SM_Shade_cv <- lmer(cv ~ Site * Month + poly(Time,2) +
 #                       #Time +
 #                     (1|Campus) +
 #                   #(1|Site:Campus) +
@@ -492,137 +425,139 @@ lm_SM_Shade <- lmer(mean ~ Site * Month + poly(Time,2) +
 #                   ,
 #                   REML = FALSE,
 #                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Shade_df)
-```
-
-
-```{r models}
-#| message: False
-anova(lm_SM_Sun)
-anova(lm_SM_Shade) 
-pairs(emmeans(lm_SM_Sun, specs = ~ Site))
-pairs(emmeans(lm_SM_Shade, specs = ~ Site))
-
-anova(lm_SM_Sun_cv)
-anova(lm_SM_Shade_cv) 
-pairs(emmeans(lm_SM_Shade, specs = ~ Site|Month))
+#                   data = LM_SM_Shade_transformed_df)
 ```
 
 
 ```{r}
-vif(lm_SM_Sun)
-AIC(lm_SM_Sun)
-plot(lm_SM_Sun)
-qqnorm(resid(lm_SM_Sun))
-
-vif(lm_SM_Shade)
-AIC(lm_SM_Shade)
-plot(lm_SM_Shade)
-qqnorm(resid(lm_SM_Shade))
-
-vif(lm_SM_Sun_cv)
-AIC(lm_SM_Sun_cv)
-plot(lm_SM_Sun_cv)
-qqnorm(resid(lm_SM_Sun_cv))
-
-vif(lm_SM_Shade_cv)
-AIC(lm_SM_Shade_cv)
-plot(lm_SM_Shade_cv)
-qqnorm(resid(lm_SM_Shade_cv))
-```
-
-
-```{r}
-library(broom)
-
-res <- resid(lm_SM_Sun)
-idx <- order(abs(res), decreasing = TRUE)
-head(idx)
-LM_SM_Sun_df[idx[1:10], ]
-```
-
-```{r}
-lm_SM_Sun_transformed <- lmer(mean_transformed
-                              ~ Site * Month +
-                            poly(Time, 2) + 
-                    #(1|Campus) + 
-                    (1|Site:Campus) + (1|Month:Site:Campus), 
-                  REML = FALSE,
-                  control = lmerControl(optimizer = "bobyqa"),
-                  data = filter(SM_Sun_transformed, 
-                                Location == "Sun"))
-
-lm_SM_Shade_transformed <- lmer(mean_transformed
-                                ~ Site * Month + poly(Time, 2) + 
-                    #(1|Campus) + 
-                    (1|Site:Campus) + (1|Month:Site:Campus), 
-                  REML = FALSE, 
-                  control = lmerControl(optimizer = "bobyqa"),
-                  data = filter(SM_Shade_transformed, 
-                                Location == "Shade"))
-```
-
-```{r}
-anova(lm_SM_Sun_transformed)
-anova(lm_SM_Shade_transformed) 
-```
-
-
-```{r more-models}
+library("glmmTMB")
+# library("splines")
 library("car")
-AIC(lm_SM_Sun)
-plot(lm_SM_Sun)
-qqnorm(resid(lm_SM_Sun))
-#pairs(emmeans(lm_SM_Sun, specs = ~ Site|Campus))
 
-AIC(lm_SM_Shade)
-plot(lm_SM_Shade)
-qqnorm(resid(lm_SM_Shade))
+LM_SM_Sun_Zeros_df
 
+Zeros_Sun <- glmmTMB(
+  mean ~ Site * Month + poly(Time,2) + (1|Campus) + 
+    (1|Site:Campus) +  (1|Month:Site:Campus),
+   ziformula = ~ Site + Month,
+  family = tweedie(link = "log"),
+  data = LM_SM_Sun_Zeros_df)
 
-AIC(lm_SM_Sun_transformed)
-plot(lm_VPD)
-plot(lm_SM_Shade_transformed)
-qqnorm(resid(lm_VPD))
-qqnorm(resid(lm_SM_Shade_transformed))
-
-summary(lm_SM_Shade)
-#emmeans(lm_SM, specs = ~ Site|Month)
-ranef(lm_SM)$Campus
+Zeros_Shade <- glmmTMB(
+  mean ~ Site * Month + poly(Time,2) + (1|Campus) + 
+    (1|Site:Campus) +  (1|Month:Site:Campus),
+   ziformula = ~ 1,
+  family = tweedie(link = "log"),
+  data = LM_SM_Shade_Zeros_df)
 
 
-plot(fitted(lm_SM_Sun), resid(lm_SM_Sun),
-     xlab = "Fitted values",
-     ylab = "Residuals")
-abline(h = 0, col = "red")
+Anova(Zeros_Sun, component = "cond") #Conditional model
+pairs(emmeans(Zeros_Sun, specs = ~ Site|Month, 
+              type = "response", component = "cond"), 
+      # reverse = TRUE, 
+      adjust = "tukey")
+summary(pairs(emmeans(Zeros_Sun, ~ Site | Month), 
+              #reverse = TRUE, 
+              adjust = "tukey"),
+        type = "response", component = "cond",
+        infer = c(TRUE, TRUE))
 
+Anova(Zeros_Sun,component="zi") #Zero-inflated portion
+pairs(emmeans(Zeros_Sun, specs = ~ Site, 
+              type = "response", 
+              component = "zi"))
+emmeans(Zeros_Sun, specs = ~ Month, 
+        type = "response", 
+        component = "zi")
 
-options(na.action = "na.omit")
-
-residuals <- LM_SM_HourlyAvgsLong |>
-  filter(Location == "Sun") |> 
-  mutate(residuals = resid(lm_SM_Sun))
+Anova(Zeros_Shade, component = "cond") #Conditional Model
+pairs(emmeans(Zeros_Shade, specs = ~ Site|Month, 
+              type = "response", component = "cond"), 
+      # reverse = TRUE, 
+      adjust = "tukey")
+summary(pairs(emmeans(Zeros_Shade, specs = ~ Site|Month, 
+              type = "response", component = "cond"), 
+              # reverse = TRUE, 
+              adjust = "tukey",
+        infer = c(TRUE, TRUE)))
+# no ZI component aside from an intercept
+# Anova(Zeros_Shade,component="zi") 
 
 ```
 
 
 ```{r}
-lm_VPD <- lmer((mean^(1/4)) ~ 
+library("performance")
+summary(Zeros_Sun)
+check_collinearity(Zeros_Sun)
+check_overdispersion(Zeros_Sun)
+model_performance(Zeros_Sun)
+diagnose(Zeros_Sun)
+check_convergence(Zeros_Sun)
+Zeros_Sun$sdr$pdHess
+```
+
+```{r}
+res_Sun <- simulateResiduals(Zeros_Sun, n = 1000)
+plot(res_Sun)
+
+testUniformity(res_Sun)
+testDispersion(res_Sun)
+testZeroInflation(res_Sun)
+```
+```{r}
+res_Shade <- simulateResiduals(Zeros_Shade, n = 1000)
+plot(res_Shade)
+
+ testUniformity(res_Shade)
+testDispersion(res_Shade)
+testZeroInflation(res_Shade)
+```
+
+
+```{r}
+lm_VPD <- lmer(log(mean) ~ 
                     Site * Month +
                     poly(Time, 4) + 
                     (1|Campus) + 
-                    (1|Site:Campus), 
+                    (1|Site:Campus) +
+                    (1|Month:Site:Campus), 
                   REML = FALSE,
                   control = lmerControl(optimizer = "bobyqa"),
                   data = LM_VPD_HourlyAvgsLong)
 
-anova(lm_VPD)
+lm_VPD_cv <- lmer(log(cv) ~ 
+                    Site * Month +
+                    poly(Time, 4) + 
+                    (1|Campus) + 
+                    (1|Site:Campus)+
+                    (1|Month:Site:Campus), 
+                  REML = FALSE,
+                  control = lmerControl(optimizer = "bobyqa"),
+                  data = LM_VPD_HourlyAvgsLong)
+```
 
+
+```{r}
+anova(lm_VPD)
+#emmeans(lm_VPD, ~ Month)
+summary(emmeans(lm_VPD, ~ Month), type = "response")
+
+anova(lm_VPD_cv)
+pairs(emmeans(lm_VPD_cv, ~ Site, type = "response"), reverse = TRUE)
+summary(emmeans(lm_VPD_cv, ~ Site), type = "response")
+
+emmeans(lm_VPD_cv, ~ Month, type = "response")
+summary(emmeans(lm_VPD_cv, ~ Month), 
+        type = "response")
 ```
 
 ```{r}
 qqnorm(resid(lm_VPD))
 plot(lm_VPD)
+
+qqnorm(resid(lm_VPD_cv))
+plot(lm_VPD_cv)
 
 
 boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Month)
@@ -631,6 +566,13 @@ boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Site)
 simulationOutput <- simulateResiduals(fittedModel = lm_VPD, n = 500)
 plot(simulationOutput)#Plotting results
 testDispersion(simulationOutput)#Testing for overdispersion.
+
+
+infl <- hlm_influence(lm_VPD_cv)
+infl[order(-infl$cooksd),][1:10,]
+ggplot(infl, aes(x = leverage.overall, 
+                 y = cooksd)) +
+  geom_point() 
 ```
 
 
@@ -639,7 +581,7 @@ okabe_ito <- c(
   "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 SM_Graph <- SM_HourlyAvgsLong |>
-  mutate(
+  mutate(# mean = mean + 1, 
     Month_num = match(as.character(Month), month.abb),
     Time_hr = time_length(Time, "hours"),
     grey_color = if_else(Site == "On", "grey60", "grey75"))
@@ -652,14 +594,14 @@ SM_Graph <- SM_HourlyAvgsLong |>
 #     .groups = "drop") |> 
 #   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
 
-pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month * Time, 
-                       at = list(Time = seq(0, 23, by = .5))) |>
+pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month + Time, 
+                       at = list(Time = seq(6.5, 20, by = .5))) |>
   as.data.frame() |>
   mutate(Time_hr = Time,
          Site = factor(Site, levels = c("On", "Off")),
          Location = "Sun")
 
-pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month * Time, 
+pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month + Time, 
                        at = list(Time = seq(0, 23, by = .5))) |>
   as.data.frame() |>
   mutate(Time_hr = Time,
@@ -668,8 +610,9 @@ pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month * Time,
 
 pred_SM <- pred_SM_Sun |> 
   full_join(pred_SM_Shade, 
-            by = c("Site", "Month", "Time", "emmean", "SE", "df", "asymp.LCL", "asymp.UCL", "Time_hr", "Location")) |> 
+            by = c("Site", "Month", "Time", "emmean", "SE", "df", "lower.CL", "upper.CL", "Time_hr", "Location")) |> 
   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
+  filter(Time >= 6.5, Time <= 20) |> 
   arrange(Location, Month, Site, Time)
 
 ggplot() +
@@ -682,7 +625,7 @@ ggplot() +
   #            color = "grey70", alpha = 0.6) +
   # reference line (campus-averaged)
   geom_ribbon(data = pred_SM,
-              aes(x = Time, ymin = asymp.LCL, ymax = asymp.UCL, 
+              aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
                   fill = Site_color, group = Site
               ), alpha = .25)+
   scale_fill_identity(name = "Site",
@@ -705,8 +648,8 @@ ggplot() +
   #                      "On"  = "Urban",
   #                      "Off" = "Non-urban")) +
   scale_x_continuous(
-    name = "Time of Day",
-    breaks = seq(2, 20, 6)) +
+    name = "Hours After Midnight",
+    breaks = c(8, 13, 18)) +
   labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
        color = "Site") +
   theme_bw() +
@@ -718,9 +661,265 @@ ggplot() +
         legend.title = element_text(size = 18))
 ```
 
+```{r}
+site_cols <- c("On"  = "#56B4E9",  #aka Urban
+               "Off" = "#E69F00")   #aka Non-urban
+site_labs <- c("On"  = "Urban",
+               "Off" = "Non-urban")
+time_grid <- seq(6.5, 20, by = 0.5)
+
+
+make_conditional_predictions <- function(model, location, times) {
+  emmeans(
+    model,
+    specs = ~ Site | Month + Time,
+    at = list(Time = times),
+    component = "cond",
+    type = "response") |>
+    as.data.frame() |>
+    mutate(
+      Location = location,
+      Time_hr = Time,
+      Site = factor(Site, levels = c("On", "Off")))}
+
+# Conditional-model predictions
+pred_sun <- make_conditional_predictions(
+  Zeros_Sun, "Sun", time_grid)
+
+pred_shade <- make_conditional_predictions(
+  Zeros_Shade, "Shade", time_grid)
+
+pred_sm <- bind_rows(pred_sun, pred_shade) |>
+  mutate(
+    Location = factor(Location, levels = c("Shade", "Sun")))
+
+# Observed campus values (raw data)
+obs_sm <- bind_rows(
+  LM_SM_Sun_Zeros_df |> mutate(Location = "Sun"),
+  LM_SM_Shade_Zeros_df |> mutate(Location = "Shade")) |>
+  mutate(
+    Time_hr = Time,
+    Location = factor(Location, levels = c("Shade", "Sun")),
+    Site = factor(Site, levels = c("On", "Off")),
+    grey_color = if_else(Site == "On", "grey50", "grey75")) |>
+  filter(Time_hr >= 6.5, Time_hr <= 20)
+
+ggplot() + 
+  geom_line(data = obs_sm,
+    aes(x = Time_hr, y = mean, group = interaction(Campus, Site), 
+        linetype = Site, color = grey_color),
+    # color = "grey55", 
+        alpha = 0.45, linewidth = 0.8, show.legend = FALSE) +
+  # geom_ribbon( # 95% CIs
+  #   data = pred_sm,
+  #   aes(x = Time_hr, ymin = asymp.LCL, ymax = asymp.UCL, fill = Site, group = Site),
+  #   alpha = 0.22, color = NA) +
+  geom_line(  #Conditional-model predicted means
+    data = pred_sm,
+    aes(x = Time_hr, y = response, color = Site, group = Site), linewidth = 1.15) +
+  facet_grid(Location ~ Month) +
+  scale_color_manual(
+    values = site_cols, labels = site_labs, name = "Site") +
+  scale_fill_manual(
+    values = site_cols, labels = site_labs, name = "Site") +
+  scale_x_continuous( 
+    name = "Time of Day", breaks = c(8, 13, 18), labels = paste0(c(8, 13, 18), ":00")) +
+  coord_cartesian(ylim = c(0, 0.4)) +
+  # scale_y_sqrt(
+  #   breaks = c(0, 0.01, 0.04, 0.09, 0.16, 0.25, 0.36))+
+  labs(
+    y = expression("Conditional Soil Moisture (" * m^3 / m^3 * ")")) +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 12),
+    strip.text = element_text(size = 13),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 15),
+    axis.text.x = element_text(angle = -45, hjust = 0)
+  )
+```
+
+
+```{r}
+#| warning: False
+
+library("ggbreak")
+
+VPD_Graph <- VPD_HourlyAvgsLong |>
+  mutate(# mean = mean + 1, 
+    Month_num = match(as.character(Month), month.abb),
+    Time_hr = time_length(Time, "hours"),
+    grey_color = if_else(Site == "On", "grey60", "grey75"),
+    Site = factor(Site, levels = c("On", "Off")))
+
+pred_VPD <- emmeans(lm_VPD_cv, ~ Site | Month + Time, 
+                    type = "response",
+                       at = list(Time = seq(6, 20, by = .5))) |>
+  as.data.frame() |> 
+  mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
+
+ggplot() +
+  # campuses (grey)
+  geom_line(data = VPD_Graph,
+            aes(x = Time_hr, y = cv, group = interaction(Campus, Site), 
+                color = grey_color, linetype = Site),
+            alpha = 0.45, linewidth = 0.8, show.legend = F) +
+  # geom_point(data = SM_Graph, 
+  #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
+  #            color = "grey70", alpha = 0.6) +
+  # reference line (campus-averaged)
+  geom_ribbon(data = pred_VPD,
+              aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
+                  fill = Site_color, group = Site
+              ), alpha = .25)+
+  scale_fill_identity(name = "Site",
+                      breaks = okabe_ito[c(2, 1)])+
+  geom_line(
+    data = pred_VPD,
+    aes(x = Time, y = response, color = Site_color, group = interaction(Month, Site)
+        #group = Site
+        ),
+    linewidth = 1.2) +
+  scale_color_identity(
+    name = "Site",
+    breaks = okabe_ito[c(2,1)],
+    labels = c("Urban", "Non-urban"),
+    guide = "legend") +
+  facet_wrap(~Month) +
+  # scale_color_manual(values = okabe_ito[c(2,1)],
+  #                    breaks = c("On", "Off"),
+  #                    labels = c(
+  #                      "On"  = "Urban",
+  #                      "Off" = "Non-urban")) +
+  ylim(0, 150) +
+  # scale_y_break(c(150,260))+
+  scale_x_continuous(
+    name = "Time of Day",
+    breaks = c(8, 13, 18), 
+    labels = paste0(c(8, 13, 18), ":00")) +
+  labs(y = "CV for VPD",
+       color = "Site") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18))
+```
+
+```{r}
+VPD_Graph_1 <-VPD_Graph |> 
+  filter(Campus == "Whittier")
+
+ggplot()+
+  geom_line(data = VPD_Graph_1,
+            aes(x = Time_hr, y = cv, group = interaction(Campus, Site), 
+                color = Campus, linetype = Site), linewidth = 0.8) +
+  facet_wrap(~Month)
+
+
+VPD_All_1 <- VPD_All |>
+  as.data.frame() |>
+  mutate(Time = as.numeric(hms(format(DateTime, "%H:%M:%S"))) / 3600) |>
+  filter(Campus == "Whittier",
+         Site == "On",
+         Month == "Mar"
+         
+         )
+
+ggplot()+
+  geom_point(data = VPD_All_1, 
+             aes(x = Time, y = VPD, color = Site), 
+             alpha = .5)+
+  facet_wrap(~Month)
+
+```
+
+
+```{r}
+break_low  <- 150
+break_high <- 200
+display_gap <- 30
+
+break_y <- function(x) {
+  if_else(
+    x <= break_low, 
+    x,
+    x - (break_high - break_low) + display_gap)
+  }
+
+VPD_Graph_break <- VPD_Graph |>
+  mutate(cv_break = break_y(cv))
+
+pred_VPD_break <- pred_VPD |>
+  mutate(
+    response_break = break_y(response),
+    lower_break = break_y(lower.CL),
+    upper_break = break_y(upper.CL))
+
+ggplot() +
+  geom_line(
+    data = VPD_Graph_break,
+    aes(
+      x = Time_hr, y = cv_break,
+      group = interaction(Campus, Site),
+      color = grey_color, linetype = Site),
+    alpha = 0.45, linewidth = 0.8, show.legend = F) +
+  geom_ribbon(
+    data = pred_VPD_break,
+    aes(
+      x = Time,
+      ymin = lower_break, ymax = upper_break,
+      fill = Site_color, group = Site),
+    alpha = 0.25) +
+  geom_line(
+    data = pred_VPD_break,
+    aes(
+      x = Time, y = response_break,
+      color = Site_color,
+      group = interaction(Month, Site)),
+    linewidth = 1.2) +
+  facet_wrap(~Month, ncol = 3) +
+  scale_y_continuous(
+    name = "CV for VPD",
+    breaks = c(0, 70, 150, 200, 270),
+    labels = c(0, 70, 150, 280, 350))+
+  # scale_y_continuous(
+  #   name = "CV for VPD",
+  #   breaks = c(0, 40, 80, 120, 150, 180, 220, 270),
+  #   labels = c(0, 40, 80, 120, 150, 260, 300, 350))+
+  geom_hline(yintercept = 165, linewidth = 2.5, color = "white")+
+  # geom_hline(yintercept = 165, linewidth = .2, color = "grey", linetype = "dashed")+
+  scale_x_continuous(
+    name = "Time of Day",
+    breaks = c(8, 13, 18),
+    labels = paste0(c(8, 13, 18), ":00")) +
+  scale_fill_identity(
+    name = "Site",
+    breaks = okabe_ito[c(2, 1)]) +
+  scale_color_identity(
+    name = "Site",
+    breaks = okabe_ito[c(2, 1)],
+    labels = c("Urban", "Non-urban"),
+    guide = "legend") +
+  annotate(geom = "rect", xmin = -1, xmax = 1, ymin = 150, ymax = 165)+
+  labs(color = "Site") +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 16),
+    strip.text = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18))
+```
+
 
 ```{r other}
-#chat-provided fix
 mod_sun <- lmer(
   mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
   data = SM_model_dat |> filter(Location == "Sun"))

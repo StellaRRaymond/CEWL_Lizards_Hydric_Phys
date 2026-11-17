@@ -18,15 +18,18 @@ required_packages <-function(...) {
   else{message("No packages required installation.")} 
 }
 
-required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans")
+required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans", "ggeffects")
+
+okabe_ito <- c(
+  "#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7")
 ```
 
-```{r load, include = FALSE}
+```{r}
 Temp_Longest <- read_xlsx(
   path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","Temp",
   col_types = c(
     "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-  select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+  dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
   pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
   separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
   mutate(Campus = "Cal Poly") |> 
@@ -35,7 +38,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/CSUSM/CSUSM Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "CSUSM"), 
@@ -45,7 +48,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/Pepperdine/Pepperdine Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "Pepperdine"), 
@@ -55,7 +58,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/Scripps/Scripps Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "Scripps"), 
@@ -65,7 +68,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/Whittier/Whittier Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "Whittier"), 
@@ -75,7 +78,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/UCLA/UCLA Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "UCLA"), 
@@ -85,7 +88,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/CSUSB/CSUSB Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))|>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "CSUSB"), 
@@ -95,7 +98,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/CSULB/CSULB Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "CSULB"), 
@@ -105,7 +108,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/CLU/CLU Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "CLU"), by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
@@ -114,7 +117,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/SDSU/SDSU Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) |>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "SDSU"), by = c("DateTime", "Site", "Location", "Temperature", "Campus")) |> 
@@ -123,7 +126,7 @@ Temp_Longest <- read_xlsx(
       path = "Abiotics/Harvey Mudd/HMC Master.xlsx","Temp",
       col_types = c(
         "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))|>
-      select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
+      dplyr::select(c("DateTime","On_Amb","On_Sun","On_Shade","Off_Amb","Off_Sun","Off_Shade")) |> 
       pivot_longer(cols = -DateTime, names_to = "Site_Location", values_to = "Temperature") |>
       separate(Site_Location, into = c("Site", "Location"), sep = "_") |>
       mutate(Campus = "HMC"), 
@@ -135,7 +138,7 @@ Temp_Longest <- read_xlsx(
          MonthDayYear = mdy(MonthDayYear))
 ```
 
-```{r filter}
+```{r}
 #Removing all data with errors
 Temp_Longest_Filtered <- Temp_Longest |> 
   mutate(Time = hms(Time),
@@ -195,7 +198,7 @@ Temp_Longest_Filtered <- Temp_Longest |>
     )
 ```
 
-```{r set up}
+```{r}
 Temp_All <- 
   Temp_Longest_Filtered |> 
   pivot_wider(names_from = Location,
@@ -265,43 +268,45 @@ Temp_HourlyAvgs_lmer_AllDay <- Temp_HourlyAvgsLong_AllDay |>
 ```
 
 
-```{r models}
+```{r}
 #sun mean & cv
 HourlyAvgs_lmer_SunMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                (1|Campus) + (1|Site:Campus) + 
-                                (1|Month:Site:Campus),
+                                (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                                ,
                                 REML = FALSE, 
                                 data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Sun"))
 
-HourlyAvgs_lmer_SunCV <- lmer(log(cv)~Site*Month+poly(Time,4)+
+HourlyAvgs_lmer_SunCV <- lmer(log(cv)~Site*Month+poly(Time,2)+
                                 (1|Campus) + #(1|Site:Campus) +
                                 (1|Month:Site:Campus),
                               REML = FALSE, 
                               data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Sun"))
+
 #shade mean & cv
 HourlyAvgs_lmer_ShadeMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
+                                    (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                                  ,
                                   REML = FALSE, 
                                   data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Shade"))
-HourlyAvgs_lmer_ShadeCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
+HourlyAvgs_lmer_ShadeCV <- lmer(log(cv) ~ Site*Month + poly(Time,2) +
                                   (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
                                 REML = FALSE, 
                                 data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Shade"))
+
 #ambient mean & cv
 HourlyAvgs_lmer_AmbMean <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
-                                  (1|Campus) + (1|Site:Campus) +
-                                  (1|Month:Site:Campus),
+                                  (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus)
+                                ,
                                 REML = FALSE, 
                                 data = filter(Temp_HourlyAvgs_lmer,
                                       Location == "Ambient",
                                       !Campus == "CSUSM"))
-HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,4) +
-                                (1|Campus) + (1|Site:Campus) 
-                              + (1|Month:Site:Campus),
+HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,2) +
+                                (1|Campus) + (1|Site:Campus) + (1|Month:Site:Campus),
                               REML = FALSE, 
                               data = filter(Temp_HourlyAvgs_lmer,
                                             Location == "Ambient",
@@ -335,11 +340,14 @@ HourlyAvgs_lmer_AmbMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
 #| message: False
 anova(HourlyAvgs_lmer_SunMean)
 #summary(HourlyAvgs_lmer_SunMean)
-pairs(emmeans(HourlyAvgs_lmer_SunMean, specs = ~ Site|Month))
+pairs(emmeans(HourlyAvgs_lmer_SunMean, specs = ~ Site|Month, 
+              type = "response"), 
+              adjust = "tukey",
+        infer = c(TRUE, TRUE))
 
 anova(HourlyAvgs_lmer_SunCV)
 #summary(HourlyAvgs_lmer_SunMean)
-pairs(emmeans(HourlyAvgs_lmer_SunCV, specs = ~ Site|Month))
+# pairs(emmeans(HourlyAvgs_lmer_SunCV, specs = ~ Site|Month))
 ```
 
 
@@ -347,11 +355,14 @@ pairs(emmeans(HourlyAvgs_lmer_SunCV, specs = ~ Site|Month))
 #| message: False
 anova(HourlyAvgs_lmer_ShadeMean)
 #summary(HourlyAvgs_lmer_ShadeMean)
-pairs(emmeans(HourlyAvgs_lmer_ShadeMean, specs = ~ Site|Month))
+pairs(emmeans(HourlyAvgs_lmer_ShadeMean, specs = ~ Site|Month, 
+              type = "response"), 
+              adjust = "tukey",
+        infer = c(TRUE, TRUE))
 
 anova(HourlyAvgs_lmer_ShadeCV)
 #summary(HourlyAvgs_lmer_ShadeCV)
-pairs(emmeans(HourlyAvgs_lmer_ShadeCV, specs = ~ Site|Month))
+# pairs(emmeans(HourlyAvgs_lmer_ShadeCV, specs = ~ Site), type = "response")
 ```
 
 
@@ -359,11 +370,11 @@ pairs(emmeans(HourlyAvgs_lmer_ShadeCV, specs = ~ Site|Month))
 #| message: False
 anova(HourlyAvgs_lmer_AmbMean)
 #summary(HourlyAvgs_lmer_AmbMean)
-#pairs(emmeans(HourlyAvgs_lmer_AmbMean, specs = ~ Site|Month, adjust = "tukey")) Not valid
+# emmeans(HourlyAvgs_lmer_AmbMean, specs = ~ Site|Month, adjust = "tukey") #Not valid
 
 anova(HourlyAvgs_lmer_AmbCV)
 #summary(HourlyAvgs_lmer_ShadeCV)
-pairs(emmeans(HourlyAvgs_lmer_AmbCV, specs = ~ Site|Month))
+# pairs(emmeans(HourlyAvgs_lmer_AmbCV, specs = ~ Site|Month, type = "response"))
 ```
 
 ```{r anova-allday}
@@ -419,16 +430,7 @@ testDispersion(simulationOutput)#Testing for overdispersion.
 ```
 
 
-```{r anova}
-#Return to the time piece
-HourlyAvgs_lmer <- lmer(
-  Shade_mean ~  Site + Month + Site*Month + (1|Time) + (1|Campus),
-  data = mutate(filter(
-    Temp_HourlyAvgsWide,
-    Shade_n > 0),
-    Time = factor(as.character(Time))), REML = F)
-
-
+```{r}
 ggplot(
   filter(
     mutate(
@@ -439,17 +441,6 @@ ggplot(
   facet_grid(vars(Month)) +
   geom_point() +
   geom_line()
-
-
-okabe_ito <- c(
-  "#E69F00", # orange
-  "#56B4E9", # sky blue
-  "#009E73", # bluish green
-  "#F0E442", # yellow
-  "#0072B2", # blue
-  "#D55E00", # vermillion
-  "#CC79A7"  # reddish purple
-)
 
 
 library(ggeffects)
@@ -470,7 +461,9 @@ Temp_Graph <- Temp_HourlyAvgsLong |>
   mutate(
     Month_num = match(as.character(Month), month.abb),
     Time_hr = time_length(Time, "hours"),
-    grey_site = if_else(Site == "On", "grey50", "grey75"))
+    grey_site = if_else(Site == "On", "grey60", "grey75"), 
+    Location = str_replace(Location, "Sun", "Sun Te"),
+    Location = str_replace(Location, "Shade", "Shade Te"))
 
 # Reference line: average across campuses
 Temp_Graph_Ref <- Temp_Graph |>
@@ -479,7 +472,7 @@ Temp_Graph_Ref <- Temp_Graph |>
     mean_ref = mean(mean, na.rm = TRUE),
     .groups = "drop") |>
   mutate(color_site = if_else(
-    Site == "On", okabe_ito[1], okabe_ito[2]))
+    Site == "Off", okabe_ito[1], okabe_ito[2]))
 # HourlyAvgs_lmer_vis <- lmer(
 #   mean ~ Site * Month + Site * Time + (1|Campus),
 #   data = filter(Temp_HourlyAvgs_lmer, Location == "Shade"))
@@ -492,7 +485,7 @@ Temp_Graph_Ref <- Temp_Graph |>
 ggplot() +
   # campuses (grey)
   geom_line(data = Temp_Graph,
-  aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_site), alpha = 0.6, na.rm = T, linewidth = .5) +
+  aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_site, linetype = grey_site), alpha = 0.6, na.rm = T, linewidth = .75, show.legend = F) +
   scale_color_identity(
     name = "Site",
     breaks = okabe_ito[c(1,2)],
@@ -520,104 +513,17 @@ ggplot() +
   # scale_color_manual(values = okabe_ito[c(1,2)],
   #                   labels = c("On"  = "Urban", "Off" = "Non-urban")) +
   scale_x_continuous(
-    name = "Time of Day",
-    breaks = seq(6, 18, 4)) +
+    name = "Time of Day", breaks = c(8, 13, 18), labels = paste0(c(8, 13, 18), ":00")) +
   labs(y = "Temperature (Cº)",
        color = "Site") +
   theme_bw()+
   theme(panel.grid = element_blank(),
         axis.title = element_text(size = 20),
-        axis.text = element_text(size = 14),
+        axis.text = element_text(size = 16),
         strip.text = element_text(size = 16),
         legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18))
-
-```
-
-
-
-
-
-
-```{r}
-safe_max <- function(x) {
-  if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)}
-safe_min <- function(x) {
-  if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)}
-safe_mean <- function(x) {
-  if (all(is.na(x))) NA_real_ else mean(x, na.rm = TRUE)}
-
-Monthly_MinMax <- Temp_All %>%
-  group_by(Campus, Site, Month, MonthDayYear) %>%
-  summarise(
-    across(
-      c(Ambient, Sun, Shade),
-      list(
-        max = safe_max,
-        min = safe_min),
-      .names = "{.col}_{.fn}"),
-    .groups = "drop") %>%
-  group_by(Campus, Site, Month) %>%
-  summarise(
-    across(
-      ends_with(c("_max", "_min")),
-      safe_mean),
-    .groups = "drop")
-
-```
-
-
-```{r}
-SunMax_lmer <- lmer(Sun_max ~ Site*Month +
-                             (1|Campus) + (1|Site:Campus),
-                             REML = FALSE, 
-                            data = Monthly_MinMax)
-SunMin_lmer <- lmer(Sun_min ~ Site*Month +
-                            (1|Campus) + (1|Site:Campus),
-                            REML = FALSE, 
-                            data = Monthly_MinMax)
-ShadeMax_lmer <- lmer(Shade_max ~ Site*Month +
-                            (1|Campus) + (1|Site:Campus),
-                            REML = FALSE, 
-                            data = Monthly_MinMax)
-ShadeMin_lmer <- lmer(Shade_min ~ Site*Month +
-                            (1|Campus) + (1|Site:Campus),
-                            REML = FALSE, 
-                            data = Monthly_MinMax)
-AmbientMax_lmer <- lmer(Ambient_max ~ Site*Month +
-                            (1|Campus) + (1|Site:Campus),    
-                            REML = FALSE, 
-                            data = Monthly_MinMax)
-AmbientMin_lmer <- lmer(Ambient_min ~ Site*Month +
-                            (1|Campus) + (1|Site:Campus),
-                            REML = FALSE, 
-                            data = Monthly_MinMax)
-```
-
-```{r}
-plot(SunMax_lmer)
-qqnorm(resid(SunMax_lmer))
-hist(resid(SunMax_lmer))
-
-plot(SunMin_lmer)
-qqnorm(resid(SunMin_lmer))
-hist(resid(SunMin_lmer))
-
-plot(ShadeMax_lmer)
-qqnorm(resid(ShadeMax_lmer))
-hist(resid(ShadeMax_lmer))
-
-plot(ShadeMin_lmer)
-qqnorm(resid(ShadeMin_lmer))
-hist(resid(ShadeMin_lmer))
-
-plot(AmbientMax_lmer)
-qqnorm(resid(AmbientMax_lmer))
-hist(resid(AmbientMax_lmer))
-
-plot(AmbientMin_lmer)
-qqnorm(resid(AmbientMin_lmer))
-hist(resid(AmbientMin_lmer))
+        legend.title = element_text(size = 18),
+        axis.text.x = element_text(angle = -45, hjust = 0))
 
 ```
 
