@@ -23,10 +23,11 @@ required_packages <-function(...) {
   else{message("No packages required installation.")} 
 } #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
-required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", "emmeans", "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
+required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", "emmeans", 
+                  "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
 
-Hydric_Phys_raw <- read_xlsx(path = "Hydric_Physiology.xlsx")
-CEWL_Data_raw <- read_xlsx(path = "CEWL_Values.xlsx")
+Hydric_Phys_raw <- read_xlsx(path = "Hydric Physiology Data/Hydric_Physiology.xlsx")
+CEWL_Data_raw <- read_xlsx(path = "Hydric Physiology Data/CEWL_Values.xlsx")
 okabe_ito <- c("#E69F00", "#56B4E9") 
 
 
@@ -243,7 +244,8 @@ Table_of_Lizards <- Lizard_Data_All |>
 ```
 
 ```{r}
-SVL <- read_xlsx("Cool Lizards SVL.xlsx") |> 
+#| message: False
+SVL <- read_xlsx("Hydric Physiology Data/Cool Lizards SVL.xlsx") |> 
   dplyr::select(!"...9") |> 
   mutate(
     `Liz ID` = str_replace_all(`Liz ID`, "on", "ON"),
