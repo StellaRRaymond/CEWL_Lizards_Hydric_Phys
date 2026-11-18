@@ -1,12 +1,12 @@
 ---
 title: "Temperature"
 author: "StellaRaymond"
-date: "2026-05-17"
+date: "2026-11-18"
 output: pdf_document
 ---
 
-```{r library, include = FALSE}
-#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+```{r}
+
 required_packages <-function(...) { 
   libs<-unlist(list(...)) 
   req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
@@ -16,15 +16,17 @@ required_packages <-function(...) {
     lapply(need, library, character.only=TRUE) 
   }
   else{message("No packages required installation.")} 
-}
+} #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
-required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans", "ggeffects")
+required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans", "ggeffects", "DHARMa")
 
 okabe_ito <- c(
   "#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7")
 ```
 
 ```{r}
+#| message: False
+
 Temp_Longest <- read_xlsx(
   path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","Temp",
   col_types = c(
@@ -314,7 +316,7 @@ HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,2) +
 ```
 
 
-```{r allday-models}
+```{r}
 HourlyAvgs_lmer_SunMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
                                 (1|Campus) + (1|Site:Campus) + 
                                 (1|Month:Site:Campus),
@@ -336,7 +338,7 @@ HourlyAvgs_lmer_AmbMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
 ```
 
 
-```{r anova}
+```{r}
 #| message: False
 anova(HourlyAvgs_lmer_SunMean)
 #summary(HourlyAvgs_lmer_SunMean)
@@ -351,7 +353,7 @@ anova(HourlyAvgs_lmer_SunCV)
 ```
 
 
-```{r anova}
+```{r}
 #| message: False
 anova(HourlyAvgs_lmer_ShadeMean)
 #summary(HourlyAvgs_lmer_ShadeMean)
@@ -366,7 +368,7 @@ anova(HourlyAvgs_lmer_ShadeCV)
 ```
 
 
-```{r anova}
+```{r}
 #| message: False
 anova(HourlyAvgs_lmer_AmbMean)
 #summary(HourlyAvgs_lmer_AmbMean)
@@ -377,7 +379,7 @@ anova(HourlyAvgs_lmer_AmbCV)
 # pairs(emmeans(HourlyAvgs_lmer_AmbCV, specs = ~ Site|Month, type = "response"))
 ```
 
-```{r anova-allday}
+```{r}
 anova(HourlyAvgs_lmer_SunMean_AllDay)
 #summary(HourlyAvgs_lmer_SunMean)
 
@@ -389,7 +391,7 @@ anova(HourlyAvgs_lmer_AmbMean_AllDay)
 ```
 
 
-```{r check-sun-model}
+```{r}
 qqnorm(resid(HourlyAvgs_lmer_SunMean))
 hist(resid(HourlyAvgs_lmer_SunMean))
 plot(HourlyAvgs_lmer_SunMean)
@@ -401,7 +403,7 @@ plot(HourlyAvgs_lmer_SunCV)
 ```
 
 
-```{r check-shade-model}
+```{r}
 qqnorm(resid(HourlyAvgs_lmer_ShadeMean))
 hist(resid(HourlyAvgs_lmer_ShadeMean))
 plot(HourlyAvgs_lmer_ShadeMean)
@@ -411,7 +413,7 @@ hist(resid(HourlyAvgs_lmer_ShadeCV))
 plot(HourlyAvgs_lmer_ShadeCV)
 ```
 
-```{r check-ambient-model}
+```{r}
 qqnorm(resid(HourlyAvgs_lmer_AmbMean))
 hist(resid(HourlyAvgs_lmer_AmbMean))
 plot(HourlyAvgs_lmer_AmbMean)
@@ -422,7 +424,7 @@ plot(HourlyAvgs_lmer_AmbCV)
 ```
 
 
-```{r check-residuals}
+```{r}
 simulationOutput <- simulateResiduals(fittedModel = HourlyAvgs_lmer_SunMean, n = 1000)
 plot(simulationOutput)#Plotting results
 testDispersion(simulationOutput)#Testing for overdispersion.

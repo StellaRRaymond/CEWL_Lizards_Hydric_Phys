@@ -1,13 +1,13 @@
 ---
 title: "Soil Moisture"
 author: "StellaRaymond"
-date: "2026-05-16"
+date: "2026-11-18"
 output: pdf_document
 ---
 
 ```{r}
 #| warning: False
-#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+
 required_packages <-function(...) { 
   libs<-unlist(list(...)) 
   req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
@@ -17,16 +17,17 @@ required_packages <-function(...) {
     lapply(need, library, character.only=TRUE) 
   }
   else{message("No packages required installation.")} 
-}
+} #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
 okabe_ito <- c(
   "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans", "glmmTMB", "car")
+required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans", "glmmTMB", "car", "DHARMa", "ggbreak", "HLMdiag")
 ```
 
 
 ```{r}
+#| message: False
 #for VPD later
 Temp_All <- read_xlsx("Prelim Stat All 2026.xlsx")
 #Soil Moisture
@@ -107,6 +108,7 @@ SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","S
 
 
 ```{r}
+#| message: False
 VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","RH",
                      col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric","numeric","numeric","numeric","numeric", "numeric","numeric","numeric")) |>
   dplyr::select(c("DateTime","On_RH","Off_RH","On_Temp","Off_Temp","On_VPD", "Off_VPD")) |>
@@ -250,6 +252,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
 
 
 ```{r}
+#| message: False
 VPD_All <- VPD_All_Inported |> 
   #Removed only because it was removed from the other data set (an is likely sunned off)
   filter(!(Campus == "CSULB" & Site == "Off" & DateTime >= mdy_hms("03-05-2025 12:30:00") & DateTime <= mdy_hms("03-05-2025 18:00:00")),
@@ -274,8 +277,7 @@ VPD_All <- VPD_All_Inported |>
 
 # df_filtered_unequal <- subset(VPD_All, round(Temp, 5) != round(Ambient, 5)) |> 
 #   dplyr::select(Temp, Ambient) 
-# This code validated that I should use Ambient loggers instead because when I inputted the data into the spreadsheet, some of the temperature values were calibrated and some were not. As a result, I just imported the calibrated values. 
-
+# This code validated that I should use Ambient loggers instead because when I inputted the data into the spreadsheet, some of the temperature values were calibrated and some were not. As a result, I just imported the calibrated values and then calculated VPD. 
 ```
 
 
@@ -364,7 +366,6 @@ LM_SM_Shade_Zeros_df <- LM_SM_HourlyAvgsLong |>
 #                                       Location == "Sun" ~ mean + 0.035))
 # 
 # min(LM_SM_HourlyAvgsLong$Mean)
-
 ```
 
 
@@ -382,9 +383,10 @@ VPD_All |>
     last_date  = max(DateTime, na.rm = TRUE))
 ```
 
-##SM Models
+## SM Models
+
 ```{r}
-# Models used prior to the zero-transformation model. No longer in use
+# Models used prior to the zero-transformation model. No longer in use/valid
 # lm_SM_Sun <- lmer(log(mean_transformed) ~ Site * Month +
 #                             poly(Time,2) + 
 #                     #Time +
@@ -430,12 +432,6 @@ VPD_All |>
 
 
 ```{r}
-library("glmmTMB")
-# library("splines")
-library("car")
-
-LM_SM_Sun_Zeros_df
-
 Zeros_Sun <- glmmTMB(
   mean ~ Site * Month + poly(Time,2) + (1|Campus) + 
     (1|Site:Campus) +  (1|Month:Site:Campus),
@@ -449,8 +445,10 @@ Zeros_Shade <- glmmTMB(
    ziformula = ~ 1,
   family = tweedie(link = "log"),
   data = LM_SM_Shade_Zeros_df)
+```
 
 
+```{r}
 Anova(Zeros_Sun, component = "cond") #Conditional model
 pairs(emmeans(Zeros_Sun, specs = ~ Site|Month, 
               type = "response", component = "cond"), 
@@ -482,13 +480,11 @@ summary(pairs(emmeans(Zeros_Shade, specs = ~ Site|Month,
         infer = c(TRUE, TRUE)))
 # no ZI component aside from an intercept
 # Anova(Zeros_Shade,component="zi") 
-
 ```
 
 
 ```{r}
 library("performance")
-summary(Zeros_Sun)
 check_collinearity(Zeros_Sun)
 check_overdispersion(Zeros_Sun)
 model_performance(Zeros_Sun)
@@ -496,6 +492,7 @@ diagnose(Zeros_Sun)
 check_convergence(Zeros_Sun)
 Zeros_Sun$sdr$pdHess
 ```
+
 
 ```{r}
 res_Sun <- simulateResiduals(Zeros_Sun, n = 1000)
@@ -517,7 +514,7 @@ testZeroInflation(res_Shade)
 
 ```{r}
 lm_VPD <- lmer(log(mean) ~ 
-                    Site * Month +
+                    Site + Month +
                     poly(Time, 4) + 
                     (1|Campus) + 
                     (1|Site:Campus) +
@@ -527,7 +524,7 @@ lm_VPD <- lmer(log(mean) ~
                   data = LM_VPD_HourlyAvgsLong)
 
 lm_VPD_cv <- lmer(log(cv) ~ 
-                    Site * Month +
+                    Site + Month +
                     poly(Time, 4) + 
                     (1|Campus) + 
                     (1|Site:Campus)+
@@ -575,95 +572,97 @@ ggplot(infl, aes(x = leverage.overall,
   geom_point() 
 ```
 
-
-```{r graphs}
-okabe_ito <- c(
-  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-SM_Graph <- SM_HourlyAvgsLong |>
-  mutate(# mean = mean + 1, 
-    Month_num = match(as.character(Month), month.abb),
-    Time_hr = time_length(Time, "hours"),
-    grey_color = if_else(Site == "On", "grey60", "grey75"))
-
-# Reference line: average across campuses
-# SM_Graph_Ref <- SM_Graph |>
-#   group_by(Site, Month, Time_hr) |>
-#   summarise(
-#     mean_ref = mean(mean, na.rm = TRUE),
-#     .groups = "drop") |> 
-#   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
-
-pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month + Time, 
-                       at = list(Time = seq(6.5, 20, by = .5))) |>
-  as.data.frame() |>
-  mutate(Time_hr = Time,
-         Site = factor(Site, levels = c("On", "Off")),
-         Location = "Sun")
-
-pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month + Time, 
-                       at = list(Time = seq(0, 23, by = .5))) |>
-  as.data.frame() |>
-  mutate(Time_hr = Time,
-         Site = factor(Site, levels = c("On", "Off")),
-         Location = "Shade")
-
-pred_SM <- pred_SM_Sun |> 
-  full_join(pred_SM_Shade, 
-            by = c("Site", "Month", "Time", "emmean", "SE", "df", "lower.CL", "upper.CL", "Time_hr", "Location")) |> 
-  mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
-  filter(Time >= 6.5, Time <= 20) |> 
-  arrange(Location, Month, Site, Time)
-
-ggplot() +
-  # campuses (grey)
-  geom_line(data = SM_Graph,
-            aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_color, linetype = grey_color),
-            alpha = 0.6, linewidth = 1, show.legend = F) +
-  # geom_point(data = SM_Graph, 
-  #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
-  #            color = "grey70", alpha = 0.6) +
-  # reference line (campus-averaged)
-  geom_ribbon(data = pred_SM,
-              aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
-                  fill = Site_color, group = Site
-              ), alpha = .25)+
-  scale_fill_identity(name = "Site",
-                      breaks = okabe_ito[c(2, 1)])+
-  geom_line(
-    data = pred_SM,
-    aes(x = Time, y = emmean, color = Site_color, group = interaction(Location, Month, Site)
-        #group = Site
-        ),
-    linewidth = 1.2) +
-  scale_color_identity(
-    name = "Site",
-    breaks = okabe_ito[c(2,1)],
-    labels = c("Urban", "Non-urban"),
-    guide = "legend") +
-  facet_grid(Location ~ Month) +
-  # scale_color_manual(values = okabe_ito[c(2,1)],
-  #                    breaks = c("On", "Off"),
-  #                    labels = c(
-  #                      "On"  = "Urban",
-  #                      "Off" = "Non-urban")) +
-  scale_x_continuous(
-    name = "Hours After Midnight",
-    breaks = c(8, 13, 18)) +
-  labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
-       color = "Site") +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 14),
-        strip.text = element_text(size = 14),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18))
-```
+## Previous graphs for SM Data
 
 ```{r}
-site_cols <- c("On"  = "#56B4E9",  #aka Urban
-               "Off" = "#E69F00")   #aka Non-urban
+# okabe_ito <- c(
+#   "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# 
+# SM_Graph <- SM_HourlyAvgsLong |>
+#   mutate(# mean = mean + 1, 
+#     Month_num = match(as.character(Month), month.abb),
+#     Time_hr = time_length(Time, "hours"),
+#     grey_color = if_else(Site == "On", "grey60", "grey75"))
+# 
+# # Reference line: average across campuses
+# # SM_Graph_Ref <- SM_Graph |>
+# #   group_by(Site, Month, Time_hr) |>
+# #   summarise(
+# #     mean_ref = mean(mean, na.rm = TRUE),
+# #     .groups = "drop") |> 
+# #   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
+# 
+# pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month + Time, 
+#                        at = list(Time = seq(6.5, 20, by = .5))) |>
+#   as.data.frame() |>
+#   mutate(Time_hr = Time,
+#          Site = factor(Site, levels = c("On", "Off")),
+#          Location = "Sun")
+# 
+# pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month + Time, 
+#                        at = list(Time = seq(0, 23, by = .5))) |>
+#   as.data.frame() |>
+#   mutate(Time_hr = Time,
+#          Site = factor(Site, levels = c("On", "Off")),
+#          Location = "Shade")
+# 
+# pred_SM <- pred_SM_Sun |> 
+#   full_join(pred_SM_Shade, 
+#             by = c("Site", "Month", "Time", "emmean", "SE", "df", "lower.CL", "upper.CL", "Time_hr", "Location")) |> 
+#   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
+#   filter(Time >= 6.5, Time <= 20) |> 
+#   arrange(Location, Month, Site, Time)
+# 
+# ggplot() +
+#   # campuses (grey)
+#   geom_line(data = SM_Graph,
+#             aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_color, linetype = grey_color),
+#             alpha = 0.6, linewidth = 1, show.legend = F) +
+#   # geom_point(data = SM_Graph, 
+#   #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
+#   #            color = "grey70", alpha = 0.6) +
+#   # reference line (campus-averaged)
+#   geom_ribbon(data = pred_SM,
+#               aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
+#                   fill = Site_color, group = Site
+#               ), alpha = .25)+
+#   scale_fill_identity(name = "Site",
+#                       breaks = okabe_ito[c(2, 1)])+
+#   geom_line(
+#     data = pred_SM,
+#     aes(x = Time, y = emmean, color = Site_color, group = interaction(Location, Month, Site)
+#         #group = Site
+#         ),
+#     linewidth = 1.2) +
+#   scale_color_identity(
+#     name = "Site",
+#     breaks = okabe_ito[c(2,1)],
+#     labels = c("Urban", "Non-urban"),
+#     guide = "legend") +
+#   facet_grid(Location ~ Month) +
+#   # scale_color_manual(values = okabe_ito[c(2,1)],
+#   #                    breaks = c("On", "Off"),
+#   #                    labels = c(
+#   #                      "On"  = "Urban",
+#   #                      "Off" = "Non-urban")) +
+#   scale_x_continuous(
+#     name = "Hours After Midnight",
+#     breaks = c(8, 13, 18)) +
+#   labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
+#        color = "Site") +
+#   theme_bw() +
+#   theme(panel.grid = element_blank(),
+#         axis.title = element_text(size = 20),
+#         axis.text = element_text(size = 14),
+#         strip.text = element_text(size = 14),
+#         legend.text = element_text(size = 16),
+#         legend.title = element_text(size = 18))
+```
+
+
+```{r}
+site_cols <- c("On"  = "#56B4E9",  
+               "Off" = "#E69F00")
 site_labs <- c("On"  = "Urban",
                "Off" = "Non-urban")
 time_grid <- seq(6.5, 20, by = 0.5)
@@ -745,8 +744,6 @@ ggplot() +
 
 ```{r}
 #| warning: False
-
-library("ggbreak")
 
 VPD_Graph <- VPD_HourlyAvgsLong |>
   mutate(# mean = mean + 1, 
@@ -888,12 +885,8 @@ ggplot() +
     name = "CV for VPD",
     breaks = c(0, 70, 150, 200, 270),
     labels = c(0, 70, 150, 280, 350))+
-  # scale_y_continuous(
-  #   name = "CV for VPD",
-  #   breaks = c(0, 40, 80, 120, 150, 180, 220, 270),
-  #   labels = c(0, 40, 80, 120, 150, 260, 300, 350))+
-  geom_hline(yintercept = 165, linewidth = 2.5, color = "white")+
-  # geom_hline(yintercept = 165, linewidth = .2, color = "grey", linetype = "dashed")+
+  # geom_hline(yintercept = 165, linewidth = 2.5, color = "white")+
+  geom_hline(yintercept = 165, linewidth = .2, color = "grey", linetype = "dashed")+
   scale_x_continuous(
     name = "Time of Day",
     breaks = c(8, 13, 18),
@@ -906,7 +899,7 @@ ggplot() +
     breaks = okabe_ito[c(2, 1)],
     labels = c("Urban", "Non-urban"),
     guide = "legend") +
-  annotate(geom = "rect", xmin = -1, xmax = 1, ymin = 150, ymax = 165)+
+  # annotate(geom = "rect", xmin = -1, xmax = 1, ymin = 150, ymax = 165)+
   labs(color = "Site") +
   theme_bw() +
   theme(
@@ -918,101 +911,101 @@ ggplot() +
     legend.title = element_text(size = 18))
 ```
 
-
-```{r other}
-mod_sun <- lmer(
-  mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
-  data = SM_model_dat |> filter(Location == "Sun"))
-
-mod_shade <- lmer(
-  mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
-  data = SM_model_dat |> filter(Location == "Shade"))
-
-SM_model_dat <- SM_HourlyAvgsLong |>
-  filter(Campus != "CSUSM") |>
-  mutate(
-    Time = as.numeric(Time)/360,
-    Month = factor(Month, levels = month.abb[3:9]),   # Mar-Sep
-    Site = factor(Site),
-    Location = factor(Location),
-    Campus = factor(Campus))
-
-pred_campus_sun <- expand_grid(
-  Time = sort(unique(SM_model_dat$Time)),
-  Site = levels(SM_model_dat$Site),
-  Month = levels(SM_model_dat$Month),
-  Campus = levels(SM_model_dat$Campus)) |>
-  mutate(
-    fit = predict(mod_sun, newdata = ., re.form = NULL),
-    Location = "Sun")
-pred_campus_shade <- expand_grid(
-  Time = sort(unique(SM_model_dat$Time)),
-  Site = levels(SM_model_dat$Site),
-  Month = levels(SM_model_dat$Month),
-  Campus = levels(SM_model_dat$Campus)) |>
-  mutate(
-    fit = predict(mod_shade, newdata = ., re.form = NULL),
-    Location = "Shade")
-pred_campus <- bind_rows(pred_campus_sun, pred_campus_shade)
-
-pred_ref_sun <- expand_grid(
-  Time = sort(unique(SM_model_dat$Time)),
-  Site = levels(SM_model_dat$Site),
-  Month = levels(SM_model_dat$Month)) |>
-  mutate(
-    fit = predict(mod_sun, newdata = ., re.form = NA),
-    Location = "Sun")
-pred_ref_shade <- expand_grid(
-  Time = sort(unique(SM_model_dat$Time)),
-  Site = levels(SM_model_dat$Site),
-  Month = levels(SM_model_dat$Month)) |>
-  mutate(
-    fit = predict(mod_shade, newdata = ., re.form = NA),
-    Location = "Shade")
-pred_ref <- bind_rows(pred_ref_sun, pred_ref_shade)
-
-ggplot() +
-  geom_line(
-    data = pred_campus |> filter(Site == "On"),
-    aes(x = Time, y = fit, group = Campus),
-    color = "grey60",
-    linewidth = 1,
-    alpha = 0.6,
-    show.legend = FALSE) +
-  geom_line(
-    data = pred_campus |> filter(Site == "Off"),
-    aes(x = Time, y = fit, group = Campus),
-    color = "grey75",
-    linewidth = 1,
-    alpha = 0.6,
-    linetype = "dashed",
-    show.legend = FALSE) +
-  geom_line(
-    data = pred_ref,
-    aes(x = Time, y = fit, color = Site),
-    linewidth = 1.4) +
-  facet_grid(Location ~ Month) +
-  scale_color_manual(
-    name = "Site",
-    values = c(
-      "On" = okabe_ito[2],
-      "Off" = okabe_ito[1]),
-    labels = c(
-      "On" = "Urban",
-      "Off" = "Non-urban")) +
-  scale_x_continuous(
-    name = "Time of Day",
-    breaks = seq(0, 240, 60),
-    labels = c("0", "6", "12", "18", "24")) +
-  labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")")) +
-  theme_bw() +
-  theme(
-    panel.grid = element_blank(),
-    axis.title = element_text(size = 20),
-    axis.text = element_text(size = 14),
-    strip.text = element_text(size = 14),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 18))
+## Old, original models
+```{r}
+# mod_sun <- lmer(
+#   mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
+#   data = SM_model_dat |> filter(Location == "Sun"))
+# 
+# mod_shade <- lmer(
+#   mean ~ Site * Month + poly(Time, 2) + (1 | Campus),
+#   data = SM_model_dat |> filter(Location == "Shade"))
+# 
+# SM_model_dat <- SM_HourlyAvgsLong |>
+#   filter(Campus != "CSUSM") |>
+#   mutate(
+#     Time = as.numeric(Time)/360,
+#     Month = factor(Month, levels = month.abb[3:9]),   # Mar-Sep
+#     Site = factor(Site),
+#     Location = factor(Location),
+#     Campus = factor(Campus))
+# 
+# pred_campus_sun <- expand_grid(
+#   Time = sort(unique(SM_model_dat$Time)),
+#   Site = levels(SM_model_dat$Site),
+#   Month = levels(SM_model_dat$Month),
+#   Campus = levels(SM_model_dat$Campus)) |>
+#   mutate(
+#     fit = predict(mod_sun, newdata = ., re.form = NULL),
+#     Location = "Sun")
+# pred_campus_shade <- expand_grid(
+#   Time = sort(unique(SM_model_dat$Time)),
+#   Site = levels(SM_model_dat$Site),
+#   Month = levels(SM_model_dat$Month),
+#   Campus = levels(SM_model_dat$Campus)) |>
+#   mutate(
+#     fit = predict(mod_shade, newdata = ., re.form = NULL),
+#     Location = "Shade")
+# pred_campus <- bind_rows(pred_campus_sun, pred_campus_shade)
+# 
+# pred_ref_sun <- expand_grid(
+#   Time = sort(unique(SM_model_dat$Time)),
+#   Site = levels(SM_model_dat$Site),
+#   Month = levels(SM_model_dat$Month)) |>
+#   mutate(
+#     fit = predict(mod_sun, newdata = ., re.form = NA),
+#     Location = "Sun")
+# pred_ref_shade <- expand_grid(
+#   Time = sort(unique(SM_model_dat$Time)),
+#   Site = levels(SM_model_dat$Site),
+#   Month = levels(SM_model_dat$Month)) |>
+#   mutate(
+#     fit = predict(mod_shade, newdata = ., re.form = NA),
+#     Location = "Shade")
+# pred_ref <- bind_rows(pred_ref_sun, pred_ref_shade)
+# 
+# ggplot() +
+#   geom_line(
+#     data = pred_campus |> filter(Site == "On"),
+#     aes(x = Time, y = fit, group = Campus),
+#     color = "grey60",
+#     linewidth = 1,
+#     alpha = 0.6,
+#     show.legend = FALSE) +
+#   geom_line(
+#     data = pred_campus |> filter(Site == "Off"),
+#     aes(x = Time, y = fit, group = Campus),
+#     color = "grey75",
+#     linewidth = 1,
+#     alpha = 0.6,
+#     linetype = "dashed",
+#     show.legend = FALSE) +
+#   geom_line(
+#     data = pred_ref,
+#     aes(x = Time, y = fit, color = Site),
+#     linewidth = 1.4) +
+#   facet_grid(Location ~ Month) +
+#   scale_color_manual(
+#     name = "Site",
+#     values = c(
+#       "On" = okabe_ito[2],
+#       "Off" = okabe_ito[1]),
+#     labels = c(
+#       "On" = "Urban",
+#       "Off" = "Non-urban")) +
+#   scale_x_continuous(
+#     name = "Time of Day",
+#     breaks = seq(0, 240, 60),
+#     labels = c("0", "6", "12", "18", "24")) +
+#   labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")")) +
+#   theme_bw() +
+#   theme(
+#     panel.grid = element_blank(),
+#     axis.title = element_text(size = 20),
+#     axis.text = element_text(size = 14),
+#     strip.text = element_text(size = 14),
+#     legend.text = element_text(size = 16),
+#     legend.title = element_text(size = 18))
 
 ```
 

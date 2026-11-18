@@ -1,12 +1,12 @@
 ---
 title: "Map"
 author: "StellaRaymond"
-date: "2026-08-04"
+date: "2026-11-18"
 output: html_document
 ---
 
-```{r library, include = FALSE}
-#The following code was not written by myself but taken from my data science class. Credit to Scott Appleby.
+```{r}
+
 required_packages <-function(...) { 
   libs<-unlist(list(...)) 
   req<-suppressMessages(suppressWarnings(unlist(lapply(libs,require,character.only=TRUE)))) 
@@ -16,7 +16,7 @@ required_packages <-function(...) {
     lapply(need, library, character.only=TRUE) 
   }
   else{message("No packages required installation.")} 
-}
+} #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
 required_packages("tidyverse", "sf", "terrainr", "ggrepel", "ggspatial")
 

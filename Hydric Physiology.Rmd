@@ -1,11 +1,13 @@
 ---
 title: "Hydric Physiology"
 author: "StellaRaymond"
-date: "2026-05-04"
+date: "2026-11-18"
 output: pdf_document
 ---
 
-```{r library-and-datasheets}
+# Reading in Data
+
+```{r}
 #| echo: False #Added to prevent the printing of excess code
 #| warning: False #Added to prevent the printing of excess code
 #| message: false
@@ -19,15 +21,13 @@ required_packages <-function(...) {
     lapply(need, library, character.only=TRUE) 
   }
   else{message("No packages required installation.")} 
-}
+} #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
 required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", "emmeans", "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
 
-Hydric_Phys_raw <- read_xlsx("Hydric_Physiology.xlsx")
-CEWL_Data_raw <- read_xlsx("CEWL_Values.xlsx")
-okabe_ito <- c(
-  "#E69F00", # orange
-  "#56B4E9") # blue
+Hydric_Phys_raw <- read_xlsx(path = "Hydric_Physiology.xlsx")
+CEWL_Data_raw <- read_xlsx(path = "CEWL_Values.xlsx")
+okabe_ito <- c("#E69F00", "#56B4E9") 
 
 
 standardize_id <- function(x) {x |>
@@ -45,7 +45,7 @@ standardize_id <- function(x) {x |>
           parts[, 4] )})}
 ```
 
-```{r checking-cewl}
+```{r}
 #Check to see if they are all within their own mean or beyond
 CEWL_Data_raw |> 
   group_by(Indiv_Lizard) |> 
@@ -71,7 +71,7 @@ CEWL_Average_raw <- CEWL_Data_raw |>
 # summary(CEWL_Average$n_CEWL_mean)
 ```
 
-```{r join the data}
+```{r}
 Hydric_Phys <- Hydric_Phys_raw |>
   mutate(
     Indiv_Lizard_original = Indiv_Lizard,
@@ -100,7 +100,7 @@ Lizard_Data_All$SiteSeason <- interaction(Lizard_Data_All$Site, Lizard_Data_All$
 ```
 
 
-```{r investigate data}
+```{r}
 #| include: False
 Missing_CEWL <- Hydric_Phys |> 
   anti_join(CEWL_Average,
@@ -112,7 +112,7 @@ Missing_General <- CEWL_Average |>
 ```
 
 
-```{r filter data cewl}
+```{r}
 CEWL_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(CEWL_mean, 0.25, na.rm = TRUE), 
@@ -138,7 +138,7 @@ ggplot(CEWL_outliers, aes(x = Season, y = CEWL_mean, color = Site)) +
 ```
 
 
-```{r filter data posm}
+```{r}
 Posm_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(Posm_mean, 0.25, na.rm = TRUE), 
@@ -162,7 +162,7 @@ ggplot(Posm_outliers, aes(x = Season, y = Posm_mean, color = Site)) +
   geom_point(data = subset(Posm_outliers, outlier == TRUE), color = "red") 
 ```
 
-```{r filter data hemato}
+```{r}
 hematocrit_outliers <- Lizard_Data_All |>
   group_by(Site, Season) |>
   mutate(Q1 = quantile(Hematocrit, 0.25, na.rm = TRUE), 
@@ -186,7 +186,7 @@ ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
 ```
 
 **The following outliers can be adjusted below**
-```{r filter}
+```{r}
 #Filtering exreme outliers for CEWL
 # Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_27"
 #               & Lizard_Data_All$Season == "Spring", "CEWL_mean"] <- NA
@@ -234,7 +234,7 @@ ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
 ```
 
 
-```{r sample sizes}
+```{r}
 #| echo: False
 Table_of_Lizards <- Lizard_Data_All |> 
   mutate(Site = if_else(Site =="ON", "Urban", "Non Urban")) |> 
@@ -242,7 +242,7 @@ Table_of_Lizards <- Lizard_Data_All |>
   count() 
 ```
 
-```{r read in SVL}
+```{r}
 SVL <- read_xlsx("Cool Lizards SVL.xlsx") |> 
   dplyr::select(!"...9") |> 
   mutate(
@@ -475,7 +475,7 @@ Lizard_Master |>
 ```
 
 
-```{r run models}
+```{r}
 options(na.action = "na.omit")
 #best before +29 CEWL
 # lmer_CEWL_old <- lmer(CEWL_mean ~ 
@@ -588,14 +588,11 @@ as.data.frame(emtrends(lmer_Hem, ~ 1, var = "Condition")) |>
 ```
 
 ```{r}
-library(HLMdiag)
-
 infl <- hlm_influence(lmer_Posm)
 infl[order(-infl$cooksd),][1:10,]
 ggplot(infl, aes(x = leverage.overall, 
                  y = cooksd)) +
   geom_point() 
-
 ```
 
 
@@ -633,7 +630,7 @@ ggplot(Lizard_Master, aes(x = Site, y = Condition)) +
 
 
 
-```{r graph cewl}
+```{r}
 #| warning: False
 #| note: False
 pred_cewl <- as.data.frame(emmeans(lmer_CEWL, ~ Season * Site))
@@ -674,7 +671,7 @@ ggplot()+
 
 
 
-```{r graph ggpredict}
+```{r}
 pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
 ggplot() +
   geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
@@ -695,7 +692,7 @@ ggplot() +
         strip.text = element_text(size = 14))
 ```
 
-```{r graph ggpredict}
+```{r}
 pred_Posm <- ggpredict(lmer_Posm, terms = c("Condition", "Site", "Season"))
 ggplot() +
   geom_ribbon(
@@ -717,7 +714,7 @@ ggplot() +
 ```
 
 
-```{r graph ggpredict}
+```{r}
 library("ggeffects")
 pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
 ggplot() +
@@ -925,12 +922,12 @@ ggplot(SexGravitity_graph, aes(x = SexGravid, y = emmean)) +
   geom_point() +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
                 width = 0.2, linewidth = 1) 
-
-Condition_graph <- emmeans(lmer_Con, ~ SexGravid) |> 
-  as.data.frame()
-ggplot() +
-  geom_point(data = Lizard_Master, aes(x = SexGravid, y = Condition)) +
-  geom_point(data = Condition_graph, aes(x = SexGravid, y = emmean), color = "red", size =2)
+# 
+# Condition_graph <- emmeans(lmer_Con, ~ SexGravid) |> 
+#   as.data.frame()
+# ggplot() +
+#   geom_point(data = Lizard_Master, aes(x = SexGravid, y = Condition)) +
+#   geom_point(data = Condition_graph, aes(x = SexGravid, y = emmean), color = "red", size =2)
 ```
 
 
@@ -1017,7 +1014,7 @@ ggplot() +
 ```
 
 
-```{r graph ggpredict}
+```{r}
 pred_hemato_cnd <- ggpredict(lmer_Hem, terms = "Condition")
 ggplot() +
   geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
@@ -1041,7 +1038,6 @@ ggplot() +
 ```{r}
 ggplot(Lizard_Master)+
   geom_boxplot(aes(x = SexGravid, y = Posm_mean, color = Season))
-
 
 
 ```
