@@ -23,8 +23,8 @@ required_packages <-function(...) {
   else{message("No packages required installation.")} 
 } #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
-required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", "emmeans", 
-                  "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
+required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", 
+                  "emmeans", "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
 
 Hydric_Phys_raw <- read_xlsx(path = "Hydric Physiology Data/Hydric_Physiology.xlsx")
 CEWL_Data_raw <- read_xlsx(path = "Hydric Physiology Data/CEWL_Values.xlsx")
