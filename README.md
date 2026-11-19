@@ -1,5 +1,5 @@
 This repository includes the data used in:
-# Cool Lizards in Urban Oases: Hydric conditions and lizard physiology differ between urban and non-urban habitats. 
+# Cool Lizards in Urban Oases: ---- Hydric conditions and lizard physiology differ between urban and non-urban habitats. 
 
 Raymond, S.R., Armstrong, D., Bourgeois, M., Christman, P., Dipietrantonio, C., Forbes, N., 
 Hayash, H., Heck, E., Heptinstall, T.C., Jiang, M.S., Khasru, A., Pinkowski, K., Saraf, B., 
