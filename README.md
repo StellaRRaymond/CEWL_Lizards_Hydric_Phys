@@ -1,5 +1,5 @@
 This repository includes the data used in:
-# Cool Lizards in Urban Oases: ---- Hydric conditions and lizard physiology differ between urban and non-urban habitats. 
+# Cool Lizards in Urban Oases: Hydric conditions and lizard physiology differ between urban and non-urban habitats. 
 
 Raymond, S.R., Armstrong, D., Bourgeois, M., Christman, P., Dipietrantonio, C., Forbes, N., 
 Hayash, H., Heck, E., Heptinstall, T.C., Jiang, M.S., Khasru, A., Pinkowski, K., Saraf, B., 
@@ -11,7 +11,8 @@ Urban heat islands occur when temperatures in urban areas exceed those in non-ur
 
 # Files included in this directory
 
-## Abiotics (Folder): Includes the folders of each campus
+## Abiotics (Folder): 
+Includes the folders of each campus
 ### Within "Abiotics"
 CLU (Folder), CSULB (Folder), CSUSB (Folder), CSUSM (Folder), Cal Poly (Folder), Harvey Mudd (Folder), Pepperdine (Folder), SDSU (Folder), Scripps (Folder), UCLA (Folder), Whittier (Folder)
 Each folder includes the master .xlsx sheet (used in the markdown files) and the temperature (temp), soil moisture (SM), and relative humidity (RH) .csv files for the respective campus.
