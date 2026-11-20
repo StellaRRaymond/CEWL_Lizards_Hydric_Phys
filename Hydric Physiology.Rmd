@@ -24,7 +24,7 @@ required_packages <-function(...) {
 } #The code above was not written by myself but taken from my data science class. Credit to Scott Appleby.
 
 required_packages("tidyverse", "readxl", "writexl", "lme4", "lmerTest", "ggeffects", 
-                  "emmeans", "generics", "ggrepel", "broom", "DHARMa", "HLMdiag")
+                  "emmeans", "generics", "ggrepel", "broom", "DHARMa", "HLMdiag", "car")
 
 Hydric_Phys_raw <- read_xlsx(path = "Hydric Physiology Data/Hydric_Physiology.xlsx")
 CEWL_Data_raw <- read_xlsx(path = "Hydric Physiology Data/CEWL_Values.xlsx")
@@ -601,7 +601,6 @@ ggplot(infl, aes(x = leverage.overall,
 
 
 ```{r}
-library(car)
 simulationOutput <- simulateResiduals(fittedModel = lmer_CEWL, n = 500)
 plot(simulationOutput)#Plotting results
 testDispersion(simulationOutput)#Testing for overdispersion.
@@ -667,7 +666,8 @@ ggplot()+
     axis.title = element_text(size = 18),
     axis.text = element_text(size = 14),
     legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16))
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
 ```
 
 
@@ -691,7 +691,8 @@ ggplot() +
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14))
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
 ```
 
 ```{r}
@@ -712,7 +713,8 @@ ggplot() +
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14))
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
 ```
 
 
@@ -735,7 +737,8 @@ ggplot() +
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14))
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
 ```
 
 
@@ -809,7 +812,8 @@ ggplot()+
     axis.title = element_text(size = 18),
     axis.text = element_text(size = 14),
     legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16))
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
 
 ```
 
@@ -859,7 +863,8 @@ ggplot()+
     axis.title = element_text(size = 18),
     axis.text = element_text(size = 14),
     legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16))
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
 ```
 
 
@@ -909,7 +914,8 @@ ggplot()+
     axis.title = element_text(size = 18),
     axis.text = element_text(size = 14),
     legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16))
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
 ```
 
 
@@ -969,7 +975,8 @@ ggplot() +
         axis.title = element_text(size = 20),
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)) 
+        legend.title = element_text(size = 18), 
+    text = element_text(family = "Times")) 
   # scale_color_manual(
   #   labels = c("Non-Urban", "Urban"),
   #   values = c(okabe_ito[1], okabe_ito[2]))+
@@ -1005,7 +1012,8 @@ ggplot() +
         axis.title = element_text(size = 20),
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)) 
+        legend.title = element_text(size = 18), 
+    text = element_text(family = "Times")) 
   # scale_color_manual(
   #   labels = c("Non-Urban", "Urban"),
   #   values = c(okabe_ito[1], okabe_ito[2]))+
@@ -1017,29 +1025,38 @@ ggplot() +
 
 
 ```{r}
+#| warning: False
 pred_hemato_cnd <- ggpredict(lmer_Hem, terms = "Condition")
 ggplot() +
   geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
-             alpha = 0.25, size = 1.7) +
+             alpha = 0.55, size = 1.7) +
   geom_ribbon(
     data = pred_hemato_cnd, aes(x = x, ymin = conf.low, ymax = conf.high),
     alpha = 0.18, color = NA) +
   geom_line(
     data = pred_hemato_cnd, aes(x = x, y = predicted),
     linewidth = 1.2) +
-  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site", fill = "Site") +
+  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site") +
   theme_classic()+
   theme(axis.title = element_text(size = 20),
         axis.text = element_text(size = 16),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14))
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
 ```
 
 
 ```{r}
 ggplot(Lizard_Master)+
-  geom_boxplot(aes(x = SexGravid, y = Posm_mean, color = Season))
+  geom_boxplot(aes(x = SexGravid, y = Posm_mean, color = Season))+
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
 
 
 ```

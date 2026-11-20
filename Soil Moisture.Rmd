@@ -737,7 +737,8 @@ ggplot() +
     strip.text = element_text(size = 13),
     legend.text = element_text(size = 14),
     legend.title = element_text(size = 15),
-    axis.text.x = element_text(angle = -45, hjust = 0)
+    axis.text.x = element_text(angle = -45, hjust = 0, 
+    text = element_text(family = "Times"))
   )
 ```
 
@@ -805,7 +806,8 @@ ggplot() +
         axis.text = element_text(size = 16),
         strip.text = element_text(size = 16),
         legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18))
+        legend.title = element_text(size = 18), 
+    text = element_text(family = "Times"))
 ```
 
 ```{r}
@@ -908,7 +910,8 @@ ggplot() +
     axis.text = element_text(size = 16),
     strip.text = element_text(size = 16),
     legend.text = element_text(size = 16),
-    legend.title = element_text(size = 18))
+    legend.title = element_text(size = 18), 
+    text = element_text(family = "Times"))
 ```
 
 ## Old, original models
