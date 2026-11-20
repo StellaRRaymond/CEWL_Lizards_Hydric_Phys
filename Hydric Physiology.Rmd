@@ -5,7 +5,9 @@ date: "2026-11-18"
 output: pdf_document
 ---
 
-# Reading in Data
+# Reading in the Data
+
+### Packages & colors
 
 ```{r}
 #| echo: False #Added to prevent the printing of excess code
@@ -46,6 +48,8 @@ standardize_id <- function(x) {x |>
           parts[, 4] )})}
 ```
 
+### Checking for CEWL outliers within lizard trials
+
 ```{r}
 #Check to see if they are all within their own mean or beyond
 CEWL_Data_raw |> 
@@ -71,6 +75,8 @@ CEWL_Average_raw <- CEWL_Data_raw |>
       mean, .names = "{.col}_mean"), .groups = "drop")
 # summary(CEWL_Average$n_CEWL_mean)
 ```
+
+### Setting up datasheets
 
 ```{r}
 Hydric_Phys <- Hydric_Phys_raw |>
@@ -103,15 +109,17 @@ Lizard_Data_All$SiteSeason <- interaction(Lizard_Data_All$Site, Lizard_Data_All$
 
 ```{r}
 #| include: False
-Missing_CEWL <- Hydric_Phys |> 
-  anti_join(CEWL_Average,
-            by = "Indiv_Lizard") 
-
-Missing_General <- CEWL_Average |>
-  anti_join(Hydric_Phys,
-    by = "Indiv_Lizard")
+# Code used to help identify 
+# Missing_CEWL <- Hydric_Phys |> 
+#   anti_join(CEWL_Average,
+#             by = "Indiv_Lizard") 
+# 
+# Missing_General <- CEWL_Average |>
+#   anti_join(Hydric_Phys,
+#     by = "Indiv_Lizard")
 ```
 
+#### Checking for Outliers
 
 ```{r}
 CEWL_outliers <- Lizard_Data_All |>
@@ -187,6 +195,7 @@ ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
 ```
 
 **The following outliers can be adjusted below**
+*we ultimately kept them all*
 ```{r}
 #Filtering exreme outliers for CEWL
 # Lizard_Data_All[Lizard_Data_All$LizardID == "CSULB_OFF_27"
@@ -234,6 +243,7 @@ ggplot(hematocrit_outliers, aes(x = Season, y = Hematocrit, color = Site)) +
 
 ```
 
+#### Count groups
 
 ```{r}
 #| echo: False
@@ -241,7 +251,10 @@ Table_of_Lizards <- Lizard_Data_All |>
   mutate(Site = if_else(Site =="ON", "Urban", "Non Urban")) |> 
   group_by(Campus, Site, Season) |> 
   count() 
+Table_of_Lizards
 ```
+
+## SVL data --> Condition index
 
 ```{r}
 #| message: False
@@ -298,6 +311,8 @@ Lizard_Master <- Combined_Lizard |>
   #write_xlsx("Missing SVL.xlsx")
 ```
 
+#### Checking for Outliers
+
 ```{r}
 #| warning: FALSE
 
@@ -324,6 +339,9 @@ ggplot(data = Lizard_Master_con_outlier,
   theme_bw()+
   labs(title = "Body Condition Outliers")
 
+ggplot(Lizard_Master, aes(x = Site, y = Condition)) +
+  geom_boxplot()
+
 # head(sort(abs(augments_df$.std.resid), decreasing = TRUE))
 ```
 
@@ -337,8 +355,673 @@ Lizard_Master[Lizard_Master$LizardID == "UCLA_ON_5"
 #               & Lizard_Master$Season == "Fall", "Condition"] <- NA
 # Lizard_Master[Lizard_Master$LizardID == "CP_OFF_5"
 #               & Lizard_Master$Season == "Spring", "Condition"] <- NA
+```
+
+
+## Dredging
+
+```{r}
+#| include: False
+# options(na.action = "na.omit")
+# # 
+# CEWL_data_clean <- Lizard_Master |>
+#   dplyr::select(CEWL_mean, Season, Site, Condition, Lab_VPD, SexGravid, Campus, Posm_mean) |>
+  # drop_na()
+# # 
+# Posm_data_clean <- Lizard_Master |>
+#   dplyr::select(Posm_mean, Season, Site, Condition, SexGravid, Campus) |>
+#   drop_na()
+# # 
+# Hem_data_clean <- Lizard_Master |>
+#   dplyr::select(Hematocrit, Season, Site, Condition, SexGravid, Campus, Posm_mean) |>
+#   drop_na()
+# # 
+# lmer_CEWL_dredge <- lmer(CEWL_mean ~
+#                       Season + Site + Condition + scale(Posm_mean) +
+#                       Site:Season + Site:Condition + Season:Condition +
+#                       scale(Posm_mean):Site +
+#                       scale(Posm_mean):Condition +
+#                       scale(Posm_mean):Season +
+#                       Lab_VPD + SexGravid +
+#                       #(1|Campus) +
+#                       (1|Site:Campus),
+#                       data = CEWL_data_clean, REML = F)
+# 
+# 
+# lmer_Posm_dredge <- lmer(Posm_mean ~
+#                        Season + Site + Condition +
+#                        Season:Site + Site:Condition + Season:Condition +
+#                        SexGravid +
+#                        (1|Season:Campus) + (1|Site:Campus),
+#                        data = Posm_data_clean, REML = F)
+# 
+# lmer_Hemato_dredge <- lmer(Hematocrit ~
+#                          Season + Site + Condition + scale(Posm_mean) +
+#                       Site:Season + #Site:Condition + Season:Condition +
+#                       #scale(Posm_mean):Site +
+#                       scale(Posm_mean):Condition +
+#                       #scale(Posm_mean):Season +
+#                       #Season:Condition:scale(Posm_mean):Site +
+#                          (1|Campus) + (1|Site:Campus),
+#                          data = Hem_data_clean, REML = F)
+```
+
+
+```{r}
+#| include: False
+# library(MuMIn)
+# options(na.action = "na.fail")
+# dredge_fit_CEWL <- dredge(lmer_CEWL_dredge)
+# dredge_fit_Posm <- dredge(lmer_Posm_dredge)
+# dredge_fit_Hem <- dredge(lmer_Hemato_dredge)
+# # #
+# # subset(dredge_fit_CEWL, delta < 2)
+# # subset(dredge_fit_CEWL, sort(decending = AIC))
+# # dredge_fit_CEWL[order(dredge_fit_CEWL$AICc), ]
+# # subset(dredge_fit_Posm, delta < 2)
+# dredge_fit_CEWL <- subset(dredge_fit_CEWL, delta < 2)
+# #options(na.action = "na.omit")
+# 
+# write_xlsx(dredge_fit_CEWL, "Dreged CEWL Model.xlsx")
+```
+
+## Running Models
+
+#### LMER set up
+
+```{r}
+options(na.action = "na.omit")
+
+lmer_Posm <- lmer(Posm_mean ~ 
+                  Site +
+                  Season*Condition +
+                  # Site:Season +
+                  SexGravid +
+                  (1|Campus) + (1|Site:Campus),
+                  data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
+
+lmer_CEWL <- lmer(CEWL_mean ~ 
+                    Season + Site + Condition + Posm_scaled +
+                    Lab_VPD + SexGravid +
+                    Season:Posm_scaled +
+                    
+                    Site:Season + 
+                    
+                    #(1|Campus) +
+                    (1|Site:Campus), 
+                  data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
+
+lmer_Hem <- lmer(Hematocrit ~ 
+                 Site*Season + 
+                 Condition +
+                 Posm_mean +
+                 SexGravid + 
+                 (1|Campus) + (1|Site:Campus),
+                 data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
+```
+
+#### Posm Results
+
+```{r}
+anova(lmer_Posm)
+pairs(emmeans(lmer_Posm, specs = ~ Site))
+pairs(emmeans(lmer_Posm, specs = ~ Site|Season))
+pairs(emmeans(lmer_Posm, specs = ~ SexGravid))
+emtrends(lmer_Posm, pairwise ~ Season, var = "Condition", type = "response")
+
+as.data.frame(emtrends(lmer_Posm, ~ Season, var = "Condition")) |>
+  mutate(
+    effect_10pct = Condition.trend * log(1.10),
+    SE_10pct = SE * log(1.10),
+    lower.CL_10pct = lower.CL * log(1.10),
+    upper.CL_10pct = upper.CL * log(1.10)) |>
+  dplyr::select(Season, effect_10pct, SE_10pct, lower.CL_10pct, upper.CL_10pct) |> 
+  # dplyr::select(Season, Condition.trend, SE, lower.CL, upper.CL) |> 
+  print()
+
+Posm_trends <- emtrends(
+  lmer_Posm, ~ Season, var = "Condition", type = "response")
+test(Posm_trends)
+pairs(Posm_trends)
+
+summary(Lizard_Master$Posm_mean, na.rm = TRUE)
+sd(Lizard_Master$Posm_mean, na.rm = TRUE)
+```
+
+#### CEWL Results
+
+```{r}
+anova(lmer_CEWL) 
+pairs(emmeans(lmer_CEWL, specs = ~ Site|Season))
+emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled")
+pairs(emmeans(lmer_CEWL, specs = ~ SexGravid))
+emtrends(lmer_CEWL, ~ 1, var = "Lab_VPD")
+summary(lmer_CEWL)
+
+as.data.frame(emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled")) |> 
+  mutate(Posm.trend_unscaled = Posm_scaled.trend/sd(Lizard_Master$Posm_mean, 
+                                                    na.rm = TRUE),
+         SE = SE/sd(Lizard_Master$Posm_mean, na.rm = TRUE),
+         lower.CL = lower.CL/sd(Lizard_Master$Posm_mean, na.rm = TRUE),
+         upper.CL = upper.CL/sd(Lizard_Master$Posm_mean, na.rm = TRUE)) |> 
+  dplyr::select(!Posm_scaled.trend) |> 
+  print()
+
+CEWL_trends <- emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled", type = "response")
+test(CEWL_trends)
+pairs(CEWL_trends)
+
+summary(Lizard_Master$CEWL_mean, na.rm = TRUE)
+sd(Lizard_Master$CEWL_mean, na.rm = TRUE)
+```
+
+#### Hematocrit Results
+
+```{r}
+anova(lmer_Hem)
+pairs(emmeans(lmer_Hem, specs = ~ Site|Season))
+emtrends(lmer_Hem, ~ 1, var = "Condition")
+test(emtrends(lmer_Hem, ~ 1, var = "Condition"))
+emtrends(lmer_Hem, ~ 1, var = "Posm_mean")
+test(emtrends(lmer_Hem, ~ 1, var = "Posm_mean"))
+summary(lmer_Hem)
+
+as.data.frame(emtrends(lmer_Hem, ~ 1, var = "Condition")) |>
+  mutate(
+    effect_10pct = Condition.trend * log(1.10),
+    SE_10pct = SE * log(1.10),
+    lower.CL_10pct = lower.CL * log(1.10),
+    upper.CL_10pct = upper.CL * log(1.10)) |>
+  dplyr::select(effect_10pct, SE_10pct, lower.CL_10pct, upper.CL_10pct) |> 
+  # dplyr::select(Season, Condition.trend, SE, lower.CL, upper.CL) |> 
+  print()
+```
+
+
+## Visualizing
+
+### Manuscript Graphs
+
+#### Preparing
+
+```{r}
+CEWL_Model <- emmeans(lmer_CEWL, ~ Season*Site) %>% 
+  as.data.frame() %>% 
+  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
+         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"), 
+         Response = "CEWL")
+Hemato_Model <- emmeans(lmer_Hem, ~ Season*Site) %>% 
+  as.data.frame() %>% 
+  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
+         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"),
+         Response = "Hematocrit")
+Posm_Model <- emmeans(lmer_Posm, ~ Season*Site) %>% 
+  as.data.frame() %>% 
+  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
+         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"),
+         Response = "Plasma Osmolality")
+
+All_Models <- bind_rows(Posm_Model, CEWL_Model, Hemato_Model) %>%
+  mutate(Response = factor(Response, levels = c("CEWL", "Plasma Osmolality", "Hematocrit")))
+```
+
+#### Posm Across Seasons
+
+```{r}
+#| warning: False
+ggplot(Posm_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = (emmean + SE), ymax = (emmean - SE)), size = 1, width = 0.2) +
+  labs(y = "Predicted Osmolality (mmol/kg)") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18)) +
+  scale_color_manual(
+    labels = c("Non-Urban", "Urban"),
+    values = c(okabe_ito[1], okabe_ito[2]))
+
+ggplot()+
+  geom_jitter(data = Lizard_Master, aes(x = Season, y = Posm_mean, group = factor(Site)), 
+                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+              width = .2, show.legend = F, shape = 21, size = 2, alpha = 0.5) +
+  geom_point(data = Posm_Model, 
+             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+             size = 2) +
+  geom_line(data = Posm_Model, 
+            aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+            linewidth = 1) +
+  geom_errorbar(data = Posm_Model, 
+                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
+                width = 0.1, size = 1) +
+  labs(y = expression("Plasma Osmolality (mOsm "* kg^-1 *")" ),
+       color = "Site") +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "On"  = "Urban",
+                       "Off" = "Non-urban")) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(), 
+    axis.line = element_line(color = "black"),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
+```
+
+#### CEWL Across Seasons
+
+```{r}
+#| warning: False
+ggplot(CEWL_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
+  geom_point() +
+  geom_line() +
+  #geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), size = 1, width = 0.2) +
+  geom_errorbar(aes(ymin = (emmean + SE), ymax = (emmean - SE)), size = 1, width = 0.2) +
+  labs(y = expression("Predicted CEWL (g "* m^-2*" "*h^-1 *")")) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18)) +
+  scale_color_manual(
+    labels = c("Non-Urban", "Urban"),
+    values = c(okabe_ito[1], okabe_ito[2]))
+
+ggplot()+
+  # geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
+  #                                       color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
+  #                                       fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
+  #             width = .2, show.legend = F, shape = 21, size = 2) +
+  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
+                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+              width = .2, show.legend = F, shape = 21, size = 2, alpha = .5) +
+  geom_line(data = CEWL_Model, aes(x = Season, y = emmean, color = factor(Site), group = Site)) +
+  geom_errorbar(data = CEWL_Model, 
+                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
+                width = 0.075, size = 1) +
+  geom_point(data = CEWL_Model, 
+             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+             size = 2) +
+  labs(y = expression("CEWL (g "* m^-2*" "*h^-1 *")"),
+       color = "Site") +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "On"  = "Urban",
+                       "Off" = "Non-urban")) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(), 
+    axis.line = element_line(color = "black"),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
 
 ```
+
+#### Hematocrit Across Seasons
+
+```{r}
+#| warning: False
+ggplot(Hemato_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                width = 0.2, size = 1) +
+  labs(y = "Predicted Hematocrit (%)") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18)) +
+  scale_color_manual(
+    labels = c("Non-Urban", "Urban"),
+    values = c(okabe_ito[1], okabe_ito[2]))
+
+ggplot()+
+  geom_jitter(data = Lizard_Master, aes(x = Season, y = Hematocrit, group = factor(Site)), 
+                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
+              width = .2, show.legend = F, shape = 21, size = 2, alpha = 0.5) +
+  geom_point(data = Hemato_Model, 
+             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+             size = 2) +
+  geom_line(data = Hemato_Model, 
+            aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+            linewidth = 1) +
+  geom_errorbar(data = Hemato_Model, 
+                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
+                width = 0.1, size = 1) +
+  labs(y = "Hematocrit (%)",
+       color = "Site") +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "On"  = "Urban",
+                       "Off" = "Non-urban")) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(), 
+    axis.line = element_line(color = "black"),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
+```
+
+#### CEWL vs Posm
+
+```{r}
+#| warning: False 
+CEWL_Hydration_DF <- ggpredict(lmer_CEWL, terms = c("Posm_scaled", "Season"))
+
+posm_center <- mean(Lizard_Master$Posm_mean, na.rm = TRUE)
+posm_scale  <- sd(Lizard_Master$Posm_mean, na.rm = TRUE)
+
+CEWL_Hydration_DF <- as.data.frame(
+  ggpredict(
+    lmer_CEWL,
+    terms = c("Posm_scaled [all]", "Season"))) 
+
+CEWL_Hydration_DF$Posm_mean <- CEWL_Hydration_DF$x * posm_scale + posm_center
+
+
+ggplot() +
+  geom_ribbon(data = CEWL_Hydration_DF,
+              aes(x = Posm_mean, ymin = conf.low, ymax = conf.high,
+                  fill = group),
+              alpha = 0.25, color = NA, show.legend = FALSE) +
+  geom_point(data = Lizard_Master, aes(x = Posm_mean, y = CEWL_mean, color = Season), 
+             size = 2, alpha = .5) +
+  geom_point(data = Lizard_Master, aes(x = Posm_mean, y = CEWL_mean, color = Season), 
+             size = 2, shape = 21) +
+  geom_line(data = CEWL_Hydration_DF,
+            aes(x = Posm_mean, y = predicted, color = group),
+            linewidth = 1) +
+  labs(x = expression("Plasma Osmolality (mOsm "* kg^-1 *")" ), 
+       y = expression("CEWL (g "* m^-2*" "*h^-1 *")"), 
+       ) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18), 
+    text = element_text(family = "Times")) 
+  # scale_color_manual(
+  #   labels = c("Non-Urban", "Urban"),
+  #   values = c(okabe_ito[1], okabe_ito[2]))+
+  # scale_fill_manual(
+  #   labels = c("Non-Urban", "Urban"),
+  #   values = c(okabe_ito[1], okabe_ito[2]))
+  
+```
+
+### Secondary Graphs
+
+##### CEWL Grey background (original)
+
+```{r}
+#| warning: False
+#| note: False
+pred_cewl <- as.data.frame(emmeans(lmer_CEWL, ~ Season * Site))
+
+#Cewl Model with background
+ggplot()+
+  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
+                                        color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
+                                        fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
+              width = .2, show.legend = F, shape = 21, size = 2) +
+  # scale_color_manual(
+  #   values = c("ON" = "grey65", 
+  #              "OFF" = "grey85")) +
+  # scale_color_identity()+
+  geom_line(data = pred_cewl, aes(x = Season, y = emmean, color = factor(Site), group = Site)) +
+  geom_errorbar(data = pred_cewl, 
+                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
+                width = 0.075, size = 1) +
+  geom_point(data = pred_cewl, 
+             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
+             size = 2) +
+  labs(y = expression("Predicted CEWL (g " *m^-2*" "*h^-1* ")"),
+       color = "Site") +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "ON"  = "Urban",
+                       "OFF" = "Non-urban")) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(), 
+    axis.line = element_line(color = "black"),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16), 
+    text = element_text(family = "Times"))
+```
+
+##### Osmolality-Body Condition
+
+```{r}
+pred_Posm <- ggpredict(lmer_Posm, terms = c("Condition", "Site", "Season"))
+ggplot() +
+  geom_ribbon(
+    data = pred_Posm, aes(x = x, ymin = conf.low, ymax = conf.high, fill = group),
+    alpha = .25, color = NA) +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Site),
+             alpha = 0.25, size = 1.7) +
+  geom_line(
+    data = pred_Posm, aes(x = x, y = predicted, color = group),
+    linewidth = 1.2) +
+  facet_wrap(~facet) +
+  labs(x = "Body condition", y = "Osmolality", color = "Site", fill = "Site") +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+```
+
+```{r}
+Posm_Condition_DF <- as.data.frame(ggpredict(lmer_Posm, terms = c("Condition", "Season")))
+
+ggplot() +
+  geom_ribbon(data = Posm_Condition_DF,
+              aes(x = x, ymin = conf.low, ymax = conf.high,
+                  fill = group),
+              alpha = 0.25, color = NA, show.legend = FALSE) +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Season), 
+             size = 2, alpha = .5) +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Season), 
+             size = 2, shape = 21) +
+  geom_line(data = Posm_Condition_DF,
+            aes(x = x, y = predicted, color = group),
+            linewidth = 1) +
+  labs(x = "Body Condition", 
+       #y = "Predicted Osmolality (mmol/kg)" 
+       y = expression("Predicted Osmolality (mOsm "* kg^-1 *")" )
+       ) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18), 
+    text = element_text(family = "Times")) 
+  # scale_color_manual(
+  #   labels = c("Non-Urban", "Urban"),
+  #   values = c(okabe_ito[1], okabe_ito[2]))+
+  # scale_fill_manual(
+  #   labels = c("Non-Urban", "Urban"),
+  #   values = c(okabe_ito[1], okabe_ito[2]))
+  
+```
+
+#### Hematocrit-Body Condition
+
+```{r}
+#| warning: False
+pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
+ggplot() +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
+             alpha = 0.25, size = 1.7) +
+  geom_ribbon(
+    data = pred_hemato, aes(x = x, ymin = conf.low, ymax = conf.high, fill = group),
+    alpha = 0.18, color = NA) +
+  geom_line(
+    data = pred_hemato, aes(x = x, y = predicted, color = group),
+    linewidth = 1.2) +
+  facet_wrap(~facet) +
+  scale_color_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "ON"  = "Urban",
+                       "OFF" = "Non-urban")) +
+  scale_fill_manual(values = okabe_ito[c(1,2)],
+                     labels = c(
+                       "ON"  = "Urban",
+                       "OFF" = "Non-urban")) +
+  labs(x = "Body condition", y = "Predicted Hematocrit (%)", color = "Site", fill = "Site") +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+
+ggplot() +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Season),
+             alpha = 0.25, size = 1.7) +
+  geom_ribbon(
+    data = pred_hemato, aes(x = x, ymin = conf.low, ymax = conf.high, fill = facet),
+    alpha = 0.18, color = NA) +
+  geom_line(
+    data = pred_hemato, aes(x = x, y = predicted, color = facet),
+    linewidth = 1.2) +
+  facet_wrap(~group) +
+  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site", fill = "Site") +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+```
+
+#### Sex-Gravidity
+
+```{r}
+SexGravitity_graph <- emmeans(lmer_CEWL, ~ SexGravid) %>% 
+  as.data.frame() |> 
+  mutate(SexGravid = case_when(SexGravid == "F_Y" ~ "Pregnant Female",
+                               SexGravid == "F_N" ~ "Non-Pregnant Female",
+                               SexGravid == "M_N/A" ~ "Male"))
+ggplot(SexGravitity_graph, aes(x = SexGravid, y = emmean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                width = 0.2, linewidth = 1) +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+# 
+# Condition_graph <- emmeans(lmer_Con, ~ SexGravid) |> 
+#   as.data.frame()
+# ggplot() +
+#   geom_point(data = Lizard_Master, aes(x = SexGravid, y = Condition)) +
+#   geom_point(data = Condition_graph, aes(x = SexGravid, y = emmean), color = "red", size =2)
+```
+
+```{r}
+#| warning: False
+pred_hemato_cnd <- ggpredict(lmer_Hem, terms = "Condition")
+ggplot() +
+  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
+             alpha = 0.55, size = 1.7) +
+  geom_ribbon(
+    data = pred_hemato_cnd, aes(x = x, ymin = conf.low, ymax = conf.high),
+    alpha = 0.18, color = NA) +
+  geom_line(
+    data = pred_hemato_cnd, aes(x = x, y = predicted),
+    linewidth = 1.2) +
+  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site") +
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+```
+
+
+```{r}
+ggplot(Lizard_Master)+
+  geom_boxplot(aes(x = SexGravid, y = Posm_mean, color = Season))+
+  theme_classic()+
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        strip.text = element_text(size = 14), 
+    text = element_text(family = "Times"))
+```
+
+## Checking Models
+
+```{r}
+infl <- hlm_influence(lmer_Posm)
+infl[order(-infl$cooksd),][1:10,]
+ggplot(infl, aes(x = leverage.overall, 
+                 y = cooksd)) +
+  geom_point() 
+```
+
+```{r}
+simulationOutput <- simulateResiduals(fittedModel = lmer_CEWL, n = 500)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+#qqPlot(resid(lmer_CEWL), id = TRUE)
+qqnorm(resid(lmer_CEWL))
+hist(resid(lmer_CEWL))
+#check_model(lmer_CEWL)
+
+simulationOutput <- simulateResiduals(fittedModel = lmer_Posm, n = 500)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+qqnorm(resid(lmer_Posm))
+hist(resid(lmer_Posm))
+
+simulationOutput <- simulateResiduals(fittedModel = lmer_Hem, n = 500)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+qqnorm(resid(lmer_Hem))
+hist(resid(lmer_Hem))
+```
+
+## Lizard Counts
 
 ```{r}
 Lizard_Master |> 
@@ -406,658 +1089,5 @@ Lizard_Master |>
   summarise(
     n = n(),
     .groups = "drop")
-
-```
-
-
-```{r}
-#| include: False
-
-# options(na.action = "na.omit")
-# # 
-# CEWL_data_clean <- Lizard_Master |>
-#   dplyr::select(CEWL_mean, Season, Site, Condition, Lab_VPD, SexGravid, Campus, Posm_mean) |>
-  # drop_na()
-# # 
-# Posm_data_clean <- Lizard_Master |>
-#   dplyr::select(Posm_mean, Season, Site, Condition, SexGravid, Campus) |>
-#   drop_na()
-# # 
-# Hem_data_clean <- Lizard_Master |>
-#   dplyr::select(Hematocrit, Season, Site, Condition, SexGravid, Campus, Posm_mean) |>
-#   drop_na()
-# # 
-# lmer_CEWL_dredge <- lmer(CEWL_mean ~
-#                       Season + Site + Condition + scale(Posm_mean) +
-#                       Site:Season + Site:Condition + Season:Condition +
-#                       scale(Posm_mean):Site +
-#                       scale(Posm_mean):Condition +
-#                       scale(Posm_mean):Season +
-#                       Lab_VPD + SexGravid +
-#                       #(1|Campus) +
-#                       (1|Site:Campus),
-#                       data = CEWL_data_clean, REML = F)
-# 
-# 
-# lmer_Posm_dredge <- lmer(Posm_mean ~
-#                        Season + Site + Condition +
-#                        Season:Site + Site:Condition + Season:Condition +
-#                        SexGravid +
-#                        (1|Season:Campus) + (1|Site:Campus),
-#                        data = Posm_data_clean, REML = F)
-# 
-# lmer_Hemato_dredge <- lmer(Hematocrit ~
-#                          Season + Site + Condition + scale(Posm_mean) +
-#                       Site:Season + #Site:Condition + Season:Condition +
-#                       #scale(Posm_mean):Site +
-#                       scale(Posm_mean):Condition +
-#                       #scale(Posm_mean):Season +
-#                       #Season:Condition:scale(Posm_mean):Site +
-#                          (1|Campus) + (1|Site:Campus),
-#                          data = Hem_data_clean, REML = F)
-```
-
-
-```{r}
-# library(MuMIn)
-# options(na.action = "na.fail")
-# dredge_fit_CEWL <- dredge(lmer_CEWL_dredge)
-# dredge_fit_Posm <- dredge(lmer_Posm_dredge)
-# dredge_fit_Hem <- dredge(lmer_Hemato_dredge)
-# # #
-# # subset(dredge_fit_CEWL, delta < 2)
-# # subset(dredge_fit_CEWL, sort(decending = AIC))
-# # dredge_fit_CEWL[order(dredge_fit_CEWL$AICc), ]
-# # subset(dredge_fit_Posm, delta < 2)
-# dredge_fit_CEWL <- subset(dredge_fit_CEWL, delta < 2)
-# #options(na.action = "na.omit")
-# 
-# write_xlsx(dredge_fit_CEWL, "Dreged CEWL Model.xlsx")
-
-```
-
-
-```{r}
-options(na.action = "na.omit")
-#best before +29 CEWL
-# lmer_CEWL_old <- lmer(CEWL_mean ~ 
-#                     Season + Site + Condition + Posm_mean +
-#                     Site:Season + 
-#                     Season:Condition +
-#                     Lab_VPD + SexGravid +
-#                     (1|Site:Campus) 
-#                   , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
-# anova(lmer_CEWL_graph, lmer_CEWL_2interacts)
-
-lmer_CEWL <- lmer(CEWL_mean ~ 
-                    Season + Site + Condition + Posm_scaled +
-                    Lab_VPD + SexGravid +
-                    Season:Posm_scaled +
-                    
-                    Site:Season + 
-                    
-                    #(1|Campus) +
-                    (1|Site:Campus) 
-                   , data = filter(Lizard_Master,!is.na(CEWL_mean)), REML = F)
-
-anova(lmer_CEWL) 
-pairs(emmeans(lmer_CEWL, specs = ~ Site|Season))
-emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled")
-pairs(emmeans(lmer_CEWL, specs = ~ SexGravid))
-emtrends(lmer_CEWL, ~ 1, var = "Lab_VPD")
-summary(lmer_CEWL)
-
-as.data.frame(emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled")) |> 
-  mutate(Posm.trend_unscaled = Posm_scaled.trend/sd(Lizard_Master$Posm_mean, 
-                                                    na.rm = TRUE),
-         SE = SE/sd(Lizard_Master$Posm_mean, na.rm = TRUE),
-         lower.CL = lower.CL/sd(Lizard_Master$Posm_mean, na.rm = TRUE),
-         upper.CL = upper.CL/sd(Lizard_Master$Posm_mean, na.rm = TRUE)) |> 
-  dplyr::select(!Posm_scaled.trend) |> 
-  print()
-
-CEWL_trends <- emtrends(lmer_CEWL, ~ Season, var = "Posm_scaled", type = "response")
-test(CEWL_trends)
-pairs(CEWL_trends)
-
-summary(Lizard_Master$CEWL_mean, na.rm = TRUE)
-sd(Lizard_Master$CEWL_mean, na.rm = TRUE)
-
-lmer_Posm <- lmer(Posm_mean ~ 
-                  Site +
-                  Season*Condition +
-                  # Site:Season +
-                  SexGravid +
-                  (1|Campus) + (1|Site:Campus),
-                  data = filter(Lizard_Master, !is.na(Posm_mean)), REML = F)
-
-anova(lmer_Posm)
-pairs(emmeans(lmer_Posm, specs = ~ Site))
-pairs(emmeans(lmer_Posm, specs = ~ Site|Season))
-pairs(emmeans(lmer_Posm, specs = ~ SexGravid))
-emtrends(lmer_Posm, pairwise ~ Season, var = "Condition", type = "response")
-
-as.data.frame(emtrends(lmer_Posm, ~ Season, var = "Condition")) |>
-  mutate(
-    effect_10pct = Condition.trend * log(1.10),
-    SE_10pct = SE * log(1.10),
-    lower.CL_10pct = lower.CL * log(1.10),
-    upper.CL_10pct = upper.CL * log(1.10)) |>
-  dplyr::select(Season, effect_10pct, SE_10pct, lower.CL_10pct, upper.CL_10pct) |> 
-  # dplyr::select(Season, Condition.trend, SE, lower.CL, upper.CL) |> 
-  print()
-
-Posm_trends <- emtrends(
-  lmer_Posm, ~ Season, var = "Condition", type = "response")
-test(Posm_trends)
-pairs(Posm_trends)
-
-lmer_Hem <- lmer(Hematocrit ~ 
-                 Site*Season + 
-                 Condition +
-                 Posm_mean +
-                 SexGravid + 
-                 (1|Campus) + (1|Site:Campus),
-                 data = filter(Lizard_Master, !is.na(Hematocrit)), REML = F)
-
-anova(lmer_Hem)
-pairs(emmeans(lmer_Hem, specs = ~ Site|Season))
-emtrends(lmer_Hem, ~ 1, var = "Condition")
-test(emtrends(lmer_Hem, ~ 1, var = "Condition"))
-emtrends(lmer_Hem, ~ 1, var = "Posm_mean")
-test(emtrends(lmer_Hem, ~ 1, var = "Posm_mean"))
-summary(lmer_Hem)
-
-as.data.frame(emtrends(lmer_Hem, ~ 1, var = "Condition")) |>
-  mutate(
-    effect_10pct = Condition.trend * log(1.10),
-    SE_10pct = SE * log(1.10),
-    lower.CL_10pct = lower.CL * log(1.10),
-    upper.CL_10pct = upper.CL * log(1.10)) |>
-  dplyr::select(effect_10pct, SE_10pct, lower.CL_10pct, upper.CL_10pct) |> 
-  # dplyr::select(Season, Condition.trend, SE, lower.CL, upper.CL) |> 
-  print()
-
-
-# lmer_Con <- lmer(Condition ~
-#                  Season * Site + SexGravid +
-#                  (1|Site:Campus) + (1|Campus),
-#                  data = filter(Lizard_Master, !is.na(Condition)), REML = F)
-# anova(lmer_Con)
-# pairs(emmeans(lmer_Con, specs = ~ Season))
-# pairs(emmeans(lmer_Con, specs = ~ SexGravid))
-
-```
-
-```{r}
-infl <- hlm_influence(lmer_Posm)
-infl[order(-infl$cooksd),][1:10,]
-ggplot(infl, aes(x = leverage.overall, 
-                 y = cooksd)) +
-  geom_point() 
-```
-
-
-
-
-```{r}
-simulationOutput <- simulateResiduals(fittedModel = lmer_CEWL, n = 500)
-plot(simulationOutput)#Plotting results
-testDispersion(simulationOutput)#Testing for overdispersion.
-#qqPlot(resid(lmer_CEWL), id = TRUE)
-qqnorm(resid(lmer_CEWL))
-hist(resid(lmer_CEWL))
-#check_model(lmer_CEWL)
-
-simulationOutput <- simulateResiduals(fittedModel = lmer_Posm, n = 500)
-plot(simulationOutput)#Plotting results
-testDispersion(simulationOutput)#Testing for overdispersion.
-qqnorm(resid(lmer_Posm))
-hist(resid(lmer_Posm))
-
-simulationOutput <- simulateResiduals(fittedModel = lmer_Hem, n = 500)
-plot(simulationOutput)#Plotting results
-testDispersion(simulationOutput)#Testing for overdispersion.
-qqnorm(resid(lmer_Hem))
-hist(resid(lmer_Hem))
-
-
-```
-
-```{r}
-ggplot(Lizard_Master, aes(x = Site, y = Condition)) +
-  geom_point()
-```
-
-
-
-```{r}
-#| warning: False
-#| note: False
-pred_cewl <- as.data.frame(emmeans(lmer_CEWL, ~ Season * Site))
-
-#Cewl Model with background
-ggplot()+
-  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
-                                        color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
-                                        fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
-              width = .2, show.legend = F, shape = 21, size = 2) +
-  # scale_color_manual(
-  #   values = c("ON" = "grey65", 
-  #              "OFF" = "grey85")) +
-  # scale_color_identity()+
-  geom_line(data = pred_cewl, aes(x = Season, y = emmean, color = factor(Site), group = Site)) +
-  geom_errorbar(data = pred_cewl, 
-                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
-                width = 0.075, size = 1) +
-  geom_point(data = pred_cewl, 
-             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-             size = 2) +
-  labs(y = expression("Predicted CEWL (g " *m^-2*" "*h^-1* ")"),
-       color = "Site") +
-  scale_color_manual(values = okabe_ito[c(1,2)],
-                     labels = c(
-                       "ON"  = "Urban",
-                       "OFF" = "Non-urban")) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(), 
-    axis.line = element_line(color = "black"),
-    axis.title = element_text(size = 18),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16), 
-    text = element_text(family = "Times"))
-```
-
-
-
-
-```{r}
-pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
-ggplot() +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
-             alpha = 0.25, size = 1.7) +
-  geom_ribbon(
-    data = pred_hemato, aes(x = x, ymin = conf.low, ymax = conf.high, fill = group),
-    alpha = 0.18, color = NA) +
-  geom_line(
-    data = pred_hemato, aes(x = x, y = predicted, color = group),
-    linewidth = 1.2) +
-  facet_wrap(~facet) +
-  labs(x = "Body condition", y = "Predicted Hematocrit (%)", color = "Site", fill = "Site") +
-  theme_classic()+
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14), 
-    text = element_text(family = "Times"))
-```
-
-```{r}
-pred_Posm <- ggpredict(lmer_Posm, terms = c("Condition", "Site", "Season"))
-ggplot() +
-  geom_ribbon(
-    data = pred_Posm, aes(x = x, ymin = conf.low, ymax = conf.high, fill = group),
-    alpha = .25, color = NA) +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Site),
-             alpha = 0.25, size = 1.7) +
-  geom_line(
-    data = pred_Posm, aes(x = x, y = predicted, color = group),
-    linewidth = 1.2) +
-  facet_wrap(~facet) +
-  labs(x = "Body condition", y = "Osmolality", color = "Site", fill = "Site") +
-  theme_classic()+
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14), 
-    text = element_text(family = "Times"))
-```
-
-
-```{r}
-library("ggeffects")
-pred_hemato <- ggpredict(lmer_Hem, terms = c("Condition", "Site", "Season"))
-ggplot() +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Season),
-             alpha = 0.25, size = 1.7) +
-  geom_ribbon(
-    data = pred_hemato, aes(x = x, ymin = conf.low, ymax = conf.high, fill = facet),
-    alpha = 0.18, color = NA) +
-  geom_line(
-    data = pred_hemato, aes(x = x, y = predicted, color = facet),
-    linewidth = 1.2) +
-  facet_wrap(~group) +
-  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site", fill = "Site") +
-  theme_classic()+
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14), 
-    text = element_text(family = "Times"))
-```
-
-
-```{r}
-CEWL_Model <- emmeans(lmer_CEWL, ~ Season*Site) %>% 
-  as.data.frame() %>% 
-  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
-         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"), 
-         Response = "CEWL")
-Hemato_Model <- emmeans(lmer_Hem, ~ Season*Site) %>% 
-  as.data.frame() %>% 
-  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
-         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"),
-         Response = "Hematocrit")
-Posm_Model <- emmeans(lmer_Posm, ~ Season*Site) %>% 
-  as.data.frame() %>% 
-  mutate(Season = factor(Season, levels = c("Spring", "Fall")), 
-         Site = dplyr::recode(Site, "ON" = "On", "OFF" = "Off"),
-         Response = "Plasma Osmolality")
-
-All_Models <- bind_rows(Posm_Model, CEWL_Model, Hemato_Model) %>%
-  mutate(Response = factor(Response, levels = c("CEWL", "Plasma Osmolality", "Hematocrit")))
-```
-
-
-```{r}
-#| warning: False
-ggplot(CEWL_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
-  geom_point() +
-  geom_line() +
-  #geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), size = 1, width = 0.2) +
-  geom_errorbar(aes(ymin = (emmean + SE), ymax = (emmean - SE)), size = 1, width = 0.2) +
-  labs(y = expression("Predicted CEWL (g "* m^-2*" "*h^-1 *")")) +
-  theme_minimal() +
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(color = "black"),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)) +
-  scale_color_manual(
-    labels = c("Non-Urban", "Urban"),
-    values = c(okabe_ito[1], okabe_ito[2]))
-
-ggplot()+
-  # geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
-  #                                       color = ifelse(Lizard_Master$Site == "ON", "grey50", "grey70"),
-  #                                       fill = ifelse(Lizard_Master$Site == "ON", "grey65", "grey85"),
-  #             width = .2, show.legend = F, shape = 21, size = 2) +
-  geom_jitter(data = Lizard_Master, aes(x = Season, y = CEWL_mean, group = factor(Site)), 
-                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-              width = .2, show.legend = F, shape = 21, size = 2, alpha = .5) +
-  geom_line(data = CEWL_Model, aes(x = Season, y = emmean, color = factor(Site), group = Site)) +
-  geom_errorbar(data = CEWL_Model, 
-                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
-                width = 0.075, size = 1) +
-  geom_point(data = CEWL_Model, 
-             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-             size = 2) +
-  labs(y = expression("CEWL (g "* m^-2*" "*h^-1 *")"),
-       color = "Site") +
-  scale_color_manual(values = okabe_ito[c(1,2)],
-                     labels = c(
-                       "On"  = "Urban",
-                       "Off" = "Non-urban")) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(), 
-    axis.line = element_line(color = "black"),
-    axis.title = element_text(size = 18),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16), 
-    text = element_text(family = "Times"))
-
-```
-
-
-```{r}
-#| warning: False
-ggplot(Posm_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
-  geom_point() +
-  geom_line() +
-  geom_errorbar(aes(ymin = (emmean + SE), ymax = (emmean - SE)), size = 1, width = 0.2) +
-  labs(y = "Predicted Osmolality (mmol/kg)") +
-  theme_minimal() +
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(color = "black"),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)) +
-  scale_color_manual(
-    labels = c("Non-Urban", "Urban"),
-    values = c(okabe_ito[1], okabe_ito[2]))
-
-ggplot()+
-  geom_jitter(data = Lizard_Master, aes(x = Season, y = Posm_mean, group = factor(Site)), 
-                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-              width = .2, show.legend = F, shape = 21, size = 2, alpha = 0.5) +
-  geom_point(data = Posm_Model, 
-             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-             size = 2) +
-  geom_line(data = Posm_Model, 
-            aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-            linewidth = 1) +
-  geom_errorbar(data = Posm_Model, 
-                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
-                width = 0.1, size = 1) +
-  labs(y = expression("Plasma Osmolality (mOsm "* kg^-1 *")" ),
-       color = "Site") +
-  scale_color_manual(values = okabe_ito[c(1,2)],
-                     labels = c(
-                       "On"  = "Urban",
-                       "Off" = "Non-urban")) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(), 
-    axis.line = element_line(color = "black"),
-    axis.title = element_text(size = 18),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16), 
-    text = element_text(family = "Times"))
-```
-
-
-```{r}
-#| warning: False
-ggplot(Hemato_Model, aes(x = Season, y = emmean, color = Site, group = Site)) +
-  geom_point() +
-  geom_line() +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
-                width = 0.2, size = 1) +
-  labs(y = "Predicted Hematocrit (%)") +
-  theme_minimal() +
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(color = "black"),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18)) +
-  scale_color_manual(
-    labels = c("Non-Urban", "Urban"),
-    values = c(okabe_ito[1], okabe_ito[2]))
-
-ggplot()+
-  geom_jitter(data = Lizard_Master, aes(x = Season, y = Hematocrit, group = factor(Site)), 
-                                        color = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-                                        fill = ifelse(Lizard_Master$Site == "ON", "#56B4E9", "#E69F00"),
-              width = .2, show.legend = F, shape = 21, size = 2, alpha = 0.5) +
-  geom_point(data = Hemato_Model, 
-             aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-             size = 2) +
-  geom_line(data = Hemato_Model, 
-            aes(x = Season, y = emmean, color = factor(Site), group = Site), 
-            linewidth = 1) +
-  geom_errorbar(data = Hemato_Model, 
-                aes(x = Season, ymin = lower.CL, ymax = upper.CL, color = factor(Site)), 
-                width = 0.1, size = 1) +
-  labs(y = "Hematocrit (%)",
-       color = "Site") +
-  scale_color_manual(values = okabe_ito[c(1,2)],
-                     labels = c(
-                       "On"  = "Urban",
-                       "Off" = "Non-urban")) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(), 
-    axis.line = element_line(color = "black"),
-    axis.title = element_text(size = 18),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16), 
-    text = element_text(family = "Times"))
-```
-
-
-
-```{r}
-SexGravitity_graph <- emmeans(lmer_CEWL, ~ SexGravid) %>% 
-  as.data.frame() |> 
-  mutate(SexGravid = case_when(SexGravid == "F_Y" ~ "Pregnant Female",
-                               SexGravid == "F_N" ~ "Non-Pregnant Female",
-                               SexGravid == "M_N/A" ~ "Male"))
-ggplot(SexGravitity_graph, aes(x = SexGravid, y = emmean)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
-                width = 0.2, linewidth = 1) 
-# 
-# Condition_graph <- emmeans(lmer_Con, ~ SexGravid) |> 
-#   as.data.frame()
-# ggplot() +
-#   geom_point(data = Lizard_Master, aes(x = SexGravid, y = Condition)) +
-#   geom_point(data = Condition_graph, aes(x = SexGravid, y = emmean), color = "red", size =2)
-```
-
-
-```{r}
-#| warning: False 
-CEWL_Hydration_DF <- ggpredict(lmer_CEWL, terms = c("Posm_scaled", "Season"))
-
-posm_center <- mean(Lizard_Master$Posm_mean, na.rm = TRUE)
-posm_scale  <- sd(Lizard_Master$Posm_mean, na.rm = TRUE)
-
-CEWL_Hydration_DF <- as.data.frame(
-  ggpredict(
-    lmer_CEWL,
-    terms = c("Posm_scaled [all]", "Season"))) 
-
-CEWL_Hydration_DF$Posm_mean <- CEWL_Hydration_DF$x * posm_scale + posm_center
-
-
-ggplot() +
-  geom_ribbon(data = CEWL_Hydration_DF,
-              aes(x = Posm_mean, ymin = conf.low, ymax = conf.high,
-                  fill = group),
-              alpha = 0.25, color = NA, show.legend = FALSE) +
-  geom_point(data = Lizard_Master, aes(x = Posm_mean, y = CEWL_mean, color = Season), 
-             size = 2, alpha = .5) +
-  geom_point(data = Lizard_Master, aes(x = Posm_mean, y = CEWL_mean, color = Season), 
-             size = 2, shape = 21) +
-  geom_line(data = CEWL_Hydration_DF,
-            aes(x = Posm_mean, y = predicted, color = group),
-            linewidth = 1) +
-  labs(x = expression("Plasma Osmolality (mOsm "* kg^-1 *")" ), 
-       y = expression("CEWL (g "* m^-2*" "*h^-1 *")"), 
-       ) +
-  theme_minimal() +
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(color = "black"),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18), 
-    text = element_text(family = "Times")) 
-  # scale_color_manual(
-  #   labels = c("Non-Urban", "Urban"),
-  #   values = c(okabe_ito[1], okabe_ito[2]))+
-  # scale_fill_manual(
-  #   labels = c("Non-Urban", "Urban"),
-  #   values = c(okabe_ito[1], okabe_ito[2]))
-  
-```
-
-
-```{r}
-Posm_Condition_DF <- as.data.frame(ggpredict(lmer_Posm, terms = c("Condition", "Season")))
-
-ggplot() +
-  geom_ribbon(data = Posm_Condition_DF,
-              aes(x = x, ymin = conf.low, ymax = conf.high,
-                  fill = group),
-              alpha = 0.25, color = NA, show.legend = FALSE) +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Season), 
-             size = 2, alpha = .5) +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Posm_mean, color = Season), 
-             size = 2, shape = 21) +
-  geom_line(data = Posm_Condition_DF,
-            aes(x = x, y = predicted, color = group),
-            linewidth = 1) +
-  labs(x = "Body Condition", 
-       #y = "Predicted Osmolality (mmol/kg)" 
-       y = expression("Predicted Osmolality (mOsm "* kg^-1 *")" )
-       ) +
-  theme_minimal() +
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(color = "black"),
-        axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18), 
-    text = element_text(family = "Times")) 
-  # scale_color_manual(
-  #   labels = c("Non-Urban", "Urban"),
-  #   values = c(okabe_ito[1], okabe_ito[2]))+
-  # scale_fill_manual(
-  #   labels = c("Non-Urban", "Urban"),
-  #   values = c(okabe_ito[1], okabe_ito[2]))
-  
-```
-
-
-```{r}
-#| warning: False
-pred_hemato_cnd <- ggpredict(lmer_Hem, terms = "Condition")
-ggplot() +
-  geom_point(data = Lizard_Master, aes(x = Condition, y = Hematocrit, color = Site),
-             alpha = 0.55, size = 1.7) +
-  geom_ribbon(
-    data = pred_hemato_cnd, aes(x = x, ymin = conf.low, ymax = conf.high),
-    alpha = 0.18, color = NA) +
-  geom_line(
-    data = pred_hemato_cnd, aes(x = x, y = predicted),
-    linewidth = 1.2) +
-  labs(x = "Body condition", y = "Hematocrit (%)", color = "Site") +
-  theme_classic()+
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14), 
-    text = element_text(family = "Times"))
-```
-
-
-```{r}
-ggplot(Lizard_Master)+
-  geom_boxplot(aes(x = SexGravid, y = Posm_mean, color = Season))+
-  theme_classic()+
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 18),
-        strip.text = element_text(size = 14), 
-    text = element_text(family = "Times"))
-
-
 ```
 

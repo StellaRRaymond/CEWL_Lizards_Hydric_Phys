@@ -5,6 +5,10 @@ date: "2026-11-18"
 output: pdf_document
 ---
 
+## Reading in the Data
+
+### Packages & colors
+
 ```{r}
 
 required_packages <-function(...) { 
@@ -23,6 +27,8 @@ required_packages("tidyverse", "readxl", "writexl", "lmerTest", "lme4", "emmeans
 okabe_ito <- c(
   "#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7")
 ```
+
+### Reading in the (many..) files
 
 ```{r}
 #| message: False
@@ -140,6 +146,8 @@ Temp_Longest <- read_xlsx(
          MonthDayYear = mdy(MonthDayYear))
 ```
 
+### Filtering Known Issues
+
 ```{r}
 #Removing all data with errors
 Temp_Longest_Filtered <- Temp_Longest |> 
@@ -219,7 +227,7 @@ Temp_All <-
   #rename(Ambient = Amb) |> 
   filter(!Month %in% c("Feb", "Oct", "Nov"))
 
-write_xlsx(Temp_All, "Prelim Stat All 2026.xlsx")
+# write_xlsx(Temp_All, "Temp All.xlsx")
 
 Temp_HourlyAvgsLong <- Temp_All |>
   filter(Time <= hms("20:00:00") & Time >= hms("06:30:00")) |>
@@ -269,6 +277,9 @@ Temp_HourlyAvgs_lmer_AllDay <- Temp_HourlyAvgsLong_AllDay |>
     Month = as.factor(Month))
 ```
 
+## Running Models
+
+### LMER set up
 
 ```{r}
 #sun mean & cv
@@ -315,6 +326,7 @@ HourlyAvgs_lmer_AmbCV <- lmer(log(cv) ~ Site*Month + poly(Time,2) +
                                            !Campus == "CSUSM"))
 ```
 
+### All day versions
 
 ```{r}
 HourlyAvgs_lmer_SunMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
@@ -337,6 +349,7 @@ HourlyAvgs_lmer_AmbMean_AllDay <- lmer(log(mean) ~ Site*Month + poly(Time,2) +
                                       !Campus == "CSUSM"))
 ```
 
+### Results
 
 ```{r}
 #| message: False
@@ -390,47 +403,7 @@ anova(HourlyAvgs_lmer_AmbMean_AllDay)
 #summary(HourlyAvgs_lmer_AmbMean)
 ```
 
-
-```{r}
-qqnorm(resid(HourlyAvgs_lmer_SunMean))
-hist(resid(HourlyAvgs_lmer_SunMean))
-plot(HourlyAvgs_lmer_SunMean)
-# check_model(HourlyAvgs_lmer_SunMean)
-
-qqnorm(resid(HourlyAvgs_lmer_SunCV))
-hist(resid(HourlyAvgs_lmer_SunCV))
-plot(HourlyAvgs_lmer_SunCV)
-```
-
-
-```{r}
-qqnorm(resid(HourlyAvgs_lmer_ShadeMean))
-hist(resid(HourlyAvgs_lmer_ShadeMean))
-plot(HourlyAvgs_lmer_ShadeMean)
-
-qqnorm(resid(HourlyAvgs_lmer_ShadeCV))
-hist(resid(HourlyAvgs_lmer_ShadeCV))
-plot(HourlyAvgs_lmer_ShadeCV)
-```
-
-```{r}
-qqnorm(resid(HourlyAvgs_lmer_AmbMean))
-hist(resid(HourlyAvgs_lmer_AmbMean))
-plot(HourlyAvgs_lmer_AmbMean)
-
-qqnorm(resid(HourlyAvgs_lmer_AmbCV))
-hist(resid(HourlyAvgs_lmer_AmbCV))
-plot(HourlyAvgs_lmer_AmbCV)
-```
-
-
-```{r}
-simulationOutput <- simulateResiduals(fittedModel = HourlyAvgs_lmer_SunMean, n = 1000)
-plot(simulationOutput)#Plotting results
-testDispersion(simulationOutput)#Testing for overdispersion.
-#contrasts(HourlyAvgs_lmer)
-```
-
+## Visualize
 
 ```{r}
 ggplot(
@@ -530,3 +503,44 @@ ggplot() +
 
 ```
 
+## Checking Models
+
+```{r}
+qqnorm(resid(HourlyAvgs_lmer_SunMean))
+hist(resid(HourlyAvgs_lmer_SunMean))
+plot(HourlyAvgs_lmer_SunMean)
+# check_model(HourlyAvgs_lmer_SunMean)
+
+qqnorm(resid(HourlyAvgs_lmer_SunCV))
+hist(resid(HourlyAvgs_lmer_SunCV))
+plot(HourlyAvgs_lmer_SunCV)
+```
+
+
+```{r}
+qqnorm(resid(HourlyAvgs_lmer_ShadeMean))
+hist(resid(HourlyAvgs_lmer_ShadeMean))
+plot(HourlyAvgs_lmer_ShadeMean)
+
+qqnorm(resid(HourlyAvgs_lmer_ShadeCV))
+hist(resid(HourlyAvgs_lmer_ShadeCV))
+plot(HourlyAvgs_lmer_ShadeCV)
+```
+
+```{r}
+qqnorm(resid(HourlyAvgs_lmer_AmbMean))
+hist(resid(HourlyAvgs_lmer_AmbMean))
+plot(HourlyAvgs_lmer_AmbMean)
+
+qqnorm(resid(HourlyAvgs_lmer_AmbCV))
+hist(resid(HourlyAvgs_lmer_AmbCV))
+plot(HourlyAvgs_lmer_AmbCV)
+```
+
+
+```{r}
+simulationOutput <- simulateResiduals(fittedModel = HourlyAvgs_lmer_SunMean, n = 1000)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+#contrasts(HourlyAvgs_lmer)
+```

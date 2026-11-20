@@ -5,6 +5,10 @@ date: "2026-11-18"
 output: pdf_document
 ---
 
+## Reading in the Data
+
+### Packages & colors
+
 ```{r}
 #| warning: False
 
@@ -25,11 +29,12 @@ okabe_ito <- c(
 required_packages("tidyverse", "readxl", "lme4", "lmerTest", "emmeans", "glmmTMB", "car", "DHARMa", "ggbreak", "HLMdiag")
 ```
 
+### Reading in the (many..) files
 
 ```{r}
 #| message: False
 #for VPD later
-Temp_All <- read_xlsx("Prelim Stat All 2026.xlsx")
+Temp_All <- read_xlsx("Temp All.xlsx")
 #Soil Moisture
 SM_All_PrecCalib <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","SM") |>
   pivot_longer(cols = -DateTime, 
@@ -250,6 +255,7 @@ VPD_All_Inported <- read_xlsx(path = "Abiotics/Cal Poly/Cal Poly Master.xlsx","R
          Month = month(DateTime, label = T, abbr = T))
 ```
 
+### Filtering Known Issues
 
 ```{r}
 #| message: False
@@ -350,6 +356,8 @@ LM_SM_Shade_transformed_df <- LM_SM_HourlyAvgsLong |>
          Campus != "UCLA") |> 
   mutate(mean_transformed = mean + 1)
 
+# Some values were negative (happens when the conditions are too dry)
+
 LM_SM_Sun_Zeros_df <- LM_SM_HourlyAvgsLong |>
   filter(Location == "Sun", 
          Campus != "UCLA") |> 
@@ -368,6 +376,7 @@ LM_SM_Shade_Zeros_df <- LM_SM_HourlyAvgsLong |>
 # min(LM_SM_HourlyAvgsLong$Mean)
 ```
 
+#### Date Ranges
 
 ```{r}
 SM_All_PrecCalib |>
@@ -385,51 +394,7 @@ VPD_All |>
 
 ## SM Models
 
-```{r}
-# Models used prior to the zero-transformation model. No longer in use/valid
-# lm_SM_Sun <- lmer(log(mean_transformed) ~ Site * Month +
-#                             poly(Time,2) + 
-#                     #Time +
-#                     (1|Campus) + 
-#                     (1|Site:Campus) +
-#                     (1|Month:Site:Campus)
-#                   , 
-#                   REML = FALSE,
-#                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Sun_transformed_df)
-# 
-# lm_SM_Shade <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) +
-#                       #Time +
-#                     (1|Campus) + 
-#                     (1|Site:Campus) +
-#                     (1|Month:Site:Campus)
-#                   , 
-#                   REML = FALSE, 
-#                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Shade_transformed_df)
-# 
-# lm_SM_Sun_cv <- lmer(cv ~ Site * Month +
-#                             poly(Time,2) +
-#                     #Time +
-#                     (1|Campus)
-#                     # + (1|Site:Campus)
-#                     # + (1|Month:Site:Campus)
-#                   ,
-#                   REML = FALSE,
-#                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Sun_transformed_df)
-# 
-# lm_SM_Shade_cv <- lmer(cv ~ Site * Month + poly(Time,2) +
-#                       #Time +
-#                     (1|Campus) +
-#                   #(1|Site:Campus) +
-#                    (1|Month:Site:Campus)
-#                   ,
-#                   REML = FALSE,
-#                   control = lmerControl(optimizer = "bobyqa"),
-#                   data = LM_SM_Shade_transformed_df)
-```
-
+### glmmTMB set up for SM
 
 ```{r}
 Zeros_Sun <- glmmTMB(
@@ -447,6 +412,7 @@ Zeros_Shade <- glmmTMB(
   data = LM_SM_Shade_Zeros_df)
 ```
 
+### Results for SM
 
 ```{r}
 Anova(Zeros_Sun, component = "cond") #Conditional model
@@ -459,7 +425,9 @@ summary(pairs(emmeans(Zeros_Sun, ~ Site | Month),
               adjust = "tukey"),
         type = "response", component = "cond",
         infer = c(TRUE, TRUE))
+```
 
+```{r}
 Anova(Zeros_Sun,component="zi") #Zero-inflated portion
 pairs(emmeans(Zeros_Sun, specs = ~ Site, 
               type = "response", 
@@ -467,7 +435,9 @@ pairs(emmeans(Zeros_Sun, specs = ~ Site,
 emmeans(Zeros_Sun, specs = ~ Month, 
         type = "response", 
         component = "zi")
+```
 
+```{r}
 Anova(Zeros_Shade, component = "cond") #Conditional Model
 pairs(emmeans(Zeros_Shade, specs = ~ Site|Month, 
               type = "response", component = "cond"), 
@@ -478,39 +448,14 @@ summary(pairs(emmeans(Zeros_Shade, specs = ~ Site|Month,
               # reverse = TRUE, 
               adjust = "tukey",
         infer = c(TRUE, TRUE)))
+```
+
+```{r}
 # no ZI component aside from an intercept
 # Anova(Zeros_Shade,component="zi") 
 ```
 
-
-```{r}
-library("performance")
-check_collinearity(Zeros_Sun)
-check_overdispersion(Zeros_Sun)
-model_performance(Zeros_Sun)
-diagnose(Zeros_Sun)
-check_convergence(Zeros_Sun)
-Zeros_Sun$sdr$pdHess
-```
-
-
-```{r}
-res_Sun <- simulateResiduals(Zeros_Sun, n = 1000)
-plot(res_Sun)
-
-testUniformity(res_Sun)
-testDispersion(res_Sun)
-testZeroInflation(res_Sun)
-```
-```{r}
-res_Shade <- simulateResiduals(Zeros_Shade, n = 1000)
-plot(res_Shade)
-
- testUniformity(res_Shade)
-testDispersion(res_Shade)
-testZeroInflation(res_Shade)
-```
-
+### LMER set up for VPD
 
 ```{r}
 lm_VPD <- lmer(log(mean) ~ 
@@ -534,6 +479,7 @@ lm_VPD_cv <- lmer(log(cv) ~
                   data = LM_VPD_HourlyAvgsLong)
 ```
 
+### Results for VPD
 
 ```{r}
 anova(lm_VPD)
@@ -549,116 +495,9 @@ summary(emmeans(lm_VPD_cv, ~ Month),
         type = "response")
 ```
 
-```{r}
-qqnorm(resid(lm_VPD))
-plot(lm_VPD)
+## Visualizations
 
-qqnorm(resid(lm_VPD_cv))
-plot(lm_VPD_cv)
-
-
-boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Month)
-boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Site)
-
-simulationOutput <- simulateResiduals(fittedModel = lm_VPD, n = 500)
-plot(simulationOutput)#Plotting results
-testDispersion(simulationOutput)#Testing for overdispersion.
-
-
-infl <- hlm_influence(lm_VPD_cv)
-infl[order(-infl$cooksd),][1:10,]
-ggplot(infl, aes(x = leverage.overall, 
-                 y = cooksd)) +
-  geom_point() 
-```
-
-## Previous graphs for SM Data
-
-```{r}
-# okabe_ito <- c(
-#   "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-# 
-# SM_Graph <- SM_HourlyAvgsLong |>
-#   mutate(# mean = mean + 1, 
-#     Month_num = match(as.character(Month), month.abb),
-#     Time_hr = time_length(Time, "hours"),
-#     grey_color = if_else(Site == "On", "grey60", "grey75"))
-# 
-# # Reference line: average across campuses
-# # SM_Graph_Ref <- SM_Graph |>
-# #   group_by(Site, Month, Time_hr) |>
-# #   summarise(
-# #     mean_ref = mean(mean, na.rm = TRUE),
-# #     .groups = "drop") |> 
-# #   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
-# 
-# pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month + Time, 
-#                        at = list(Time = seq(6.5, 20, by = .5))) |>
-#   as.data.frame() |>
-#   mutate(Time_hr = Time,
-#          Site = factor(Site, levels = c("On", "Off")),
-#          Location = "Sun")
-# 
-# pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month + Time, 
-#                        at = list(Time = seq(0, 23, by = .5))) |>
-#   as.data.frame() |>
-#   mutate(Time_hr = Time,
-#          Site = factor(Site, levels = c("On", "Off")),
-#          Location = "Shade")
-# 
-# pred_SM <- pred_SM_Sun |> 
-#   full_join(pred_SM_Shade, 
-#             by = c("Site", "Month", "Time", "emmean", "SE", "df", "lower.CL", "upper.CL", "Time_hr", "Location")) |> 
-#   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
-#   filter(Time >= 6.5, Time <= 20) |> 
-#   arrange(Location, Month, Site, Time)
-# 
-# ggplot() +
-#   # campuses (grey)
-#   geom_line(data = SM_Graph,
-#             aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_color, linetype = grey_color),
-#             alpha = 0.6, linewidth = 1, show.legend = F) +
-#   # geom_point(data = SM_Graph, 
-#   #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
-#   #            color = "grey70", alpha = 0.6) +
-#   # reference line (campus-averaged)
-#   geom_ribbon(data = pred_SM,
-#               aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
-#                   fill = Site_color, group = Site
-#               ), alpha = .25)+
-#   scale_fill_identity(name = "Site",
-#                       breaks = okabe_ito[c(2, 1)])+
-#   geom_line(
-#     data = pred_SM,
-#     aes(x = Time, y = emmean, color = Site_color, group = interaction(Location, Month, Site)
-#         #group = Site
-#         ),
-#     linewidth = 1.2) +
-#   scale_color_identity(
-#     name = "Site",
-#     breaks = okabe_ito[c(2,1)],
-#     labels = c("Urban", "Non-urban"),
-#     guide = "legend") +
-#   facet_grid(Location ~ Month) +
-#   # scale_color_manual(values = okabe_ito[c(2,1)],
-#   #                    breaks = c("On", "Off"),
-#   #                    labels = c(
-#   #                      "On"  = "Urban",
-#   #                      "Off" = "Non-urban")) +
-#   scale_x_continuous(
-#     name = "Hours After Midnight",
-#     breaks = c(8, 13, 18)) +
-#   labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
-#        color = "Site") +
-#   theme_bw() +
-#   theme(panel.grid = element_blank(),
-#         axis.title = element_text(size = 20),
-#         axis.text = element_text(size = 14),
-#         strip.text = element_text(size = 14),
-#         legend.text = element_text(size = 16),
-#         legend.title = element_text(size = 18))
-```
-
+### SM
 
 ```{r}
 site_cols <- c("On"  = "#56B4E9",  
@@ -737,11 +576,12 @@ ggplot() +
     strip.text = element_text(size = 13),
     legend.text = element_text(size = 14),
     legend.title = element_text(size = 15),
-    axis.text.x = element_text(angle = -45, hjust = 0, 
-    text = element_text(family = "Times"))
+    axis.text.x = element_text(angle = -45, hjust = 0), 
+    text = element_text(family = "Times")
   )
 ```
 
+### VPD
 
 ```{r}
 #| warning: False
@@ -826,15 +666,15 @@ VPD_All_1 <- VPD_All |>
   mutate(Time = as.numeric(hms(format(DateTime, "%H:%M:%S"))) / 3600) |>
   filter(Campus == "Whittier",
          Site == "On",
-         Month == "Mar"
-         
-         )
+         Month == "Mar")
 
 ggplot()+
   geom_point(data = VPD_All_1, 
              aes(x = Time, y = VPD, color = Site), 
              alpha = .5)+
-  facet_wrap(~Month)
+  facet_wrap(~Month) +
+  annotate("point", x = 6, y = .35, size = 55, # This is highlights WHY we see that spike in VPD CV
+           shape = 1, color = "red", stroke = 1) 
 
 ```
 
@@ -913,6 +753,61 @@ ggplot() +
     legend.title = element_text(size = 18), 
     text = element_text(family = "Times"))
 ```
+
+## Data Checks
+
+```{r}
+qqnorm(resid(lm_VPD))
+plot(lm_VPD)
+
+qqnorm(resid(lm_VPD_cv))
+plot(lm_VPD_cv)
+
+
+boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Month)
+boxplot(residuals(lm_VPD) ~ LM_VPD_HourlyAvgsLong$Site)
+
+simulationOutput <- simulateResiduals(fittedModel = lm_VPD, n = 500)
+plot(simulationOutput)#Plotting results
+testDispersion(simulationOutput)#Testing for overdispersion.
+
+
+infl <- hlm_influence(lm_VPD_cv)
+infl[order(-infl$cooksd),][1:10,]
+ggplot(infl, aes(x = leverage.overall, 
+                 y = cooksd)) +
+  geom_point() 
+```
+
+
+```{r}
+library("performance")
+check_collinearity(Zeros_Sun)
+check_overdispersion(Zeros_Sun)
+model_performance(Zeros_Sun)
+diagnose(Zeros_Sun)
+check_convergence(Zeros_Sun)
+Zeros_Sun$sdr$pdHess
+```
+
+
+```{r}
+res_Sun <- simulateResiduals(Zeros_Sun, n = 1000)
+plot(res_Sun)
+
+testUniformity(res_Sun)
+testDispersion(res_Sun)
+testZeroInflation(res_Sun)
+```
+```{r}
+res_Shade <- simulateResiduals(Zeros_Shade, n = 1000)
+plot(res_Shade)
+
+ testUniformity(res_Shade)
+testDispersion(res_Shade)
+testZeroInflation(res_Shade)
+```
+
 
 ## Old, original models
 ```{r}
@@ -1011,4 +906,136 @@ ggplot() +
 #     legend.title = element_text(size = 18))
 
 ```
+
+```{r}
+# Models used prior to the zero-transformation model. No longer in use/valid
+# lm_SM_Sun <- lmer(log(mean_transformed) ~ Site * Month +
+#                             poly(Time,2) + 
+#                     #Time +
+#                     (1|Campus) + 
+#                     (1|Site:Campus) +
+#                     (1|Month:Site:Campus)
+#                   , 
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Sun_transformed_df)
+# 
+# lm_SM_Shade <- lmer(log(mean_transformed) ~ Site * Month + poly(Time,2) +
+#                       #Time +
+#                     (1|Campus) + 
+#                     (1|Site:Campus) +
+#                     (1|Month:Site:Campus)
+#                   , 
+#                   REML = FALSE, 
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Shade_transformed_df)
+# 
+# lm_SM_Sun_cv <- lmer(cv ~ Site * Month +
+#                             poly(Time,2) +
+#                     #Time +
+#                     (1|Campus)
+#                     # + (1|Site:Campus)
+#                     # + (1|Month:Site:Campus)
+#                   ,
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Sun_transformed_df)
+# 
+# lm_SM_Shade_cv <- lmer(cv ~ Site * Month + poly(Time,2) +
+#                       #Time +
+#                     (1|Campus) +
+#                   #(1|Site:Campus) +
+#                    (1|Month:Site:Campus)
+#                   ,
+#                   REML = FALSE,
+#                   control = lmerControl(optimizer = "bobyqa"),
+#                   data = LM_SM_Shade_transformed_df)
+```
+
+## Previous graphs for SM Data
+```{r}
+# okabe_ito <- c(
+#   "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# 
+# SM_Graph <- SM_HourlyAvgsLong |>
+#   mutate(# mean = mean + 1, 
+#     Month_num = match(as.character(Month), month.abb),
+#     Time_hr = time_length(Time, "hours"),
+#     grey_color = if_else(Site == "On", "grey60", "grey75"))
+# 
+# # Reference line: average across campuses
+# # SM_Graph_Ref <- SM_Graph |>
+# #   group_by(Site, Month, Time_hr) |>
+# #   summarise(
+# #     mean_ref = mean(mean, na.rm = TRUE),
+# #     .groups = "drop") |> 
+# #   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1]))
+# 
+# pred_SM_Sun <- emmeans(lm_SM_Sun, ~ Site | Month + Time, 
+#                        at = list(Time = seq(6.5, 20, by = .5))) |>
+#   as.data.frame() |>
+#   mutate(Time_hr = Time,
+#          Site = factor(Site, levels = c("On", "Off")),
+#          Location = "Sun")
+# 
+# pred_SM_Shade <- emmeans(lm_SM_Shade, ~ Site | Month + Time, 
+#                        at = list(Time = seq(0, 23, by = .5))) |>
+#   as.data.frame() |>
+#   mutate(Time_hr = Time,
+#          Site = factor(Site, levels = c("On", "Off")),
+#          Location = "Shade")
+# 
+# pred_SM <- pred_SM_Sun |> 
+#   full_join(pred_SM_Shade, 
+#             by = c("Site", "Month", "Time", "emmean", "SE", "df", "lower.CL", "upper.CL", "Time_hr", "Location")) |> 
+#   mutate(Site_color = if_else(Site == "On", okabe_ito[2], okabe_ito[1])) |> 
+#   filter(Time >= 6.5, Time <= 20) |> 
+#   arrange(Location, Month, Site, Time)
+# 
+# ggplot() +
+#   # campuses (grey)
+#   geom_line(data = SM_Graph,
+#             aes(x = Time_hr, y = mean, group = interaction(Campus, Site), color = grey_color, linetype = grey_color),
+#             alpha = 0.6, linewidth = 1, show.legend = F) +
+#   # geom_point(data = SM_Graph, 
+#   #            aes(x = Time_hr, y = mean, group = interaction(Campus, Site)),
+#   #            color = "grey70", alpha = 0.6) +
+#   # reference line (campus-averaged)
+#   geom_ribbon(data = pred_SM,
+#               aes(x = Time, ymin = lower.CL, ymax = upper.CL, 
+#                   fill = Site_color, group = Site
+#               ), alpha = .25)+
+#   scale_fill_identity(name = "Site",
+#                       breaks = okabe_ito[c(2, 1)])+
+#   geom_line(
+#     data = pred_SM,
+#     aes(x = Time, y = emmean, color = Site_color, group = interaction(Location, Month, Site)
+#         #group = Site
+#         ),
+#     linewidth = 1.2) +
+#   scale_color_identity(
+#     name = "Site",
+#     breaks = okabe_ito[c(2,1)],
+#     labels = c("Urban", "Non-urban"),
+#     guide = "legend") +
+#   facet_grid(Location ~ Month) +
+#   # scale_color_manual(values = okabe_ito[c(2,1)],
+#   #                    breaks = c("On", "Off"),
+#   #                    labels = c(
+#   #                      "On"  = "Urban",
+#   #                      "Off" = "Non-urban")) +
+#   scale_x_continuous(
+#     name = "Hours After Midnight",
+#     breaks = c(8, 13, 18)) +
+#   labs(y = expression("Soil Moisture (" * m^3 / m^3 * ")"),
+#        color = "Site") +
+#   theme_bw() +
+#   theme(panel.grid = element_blank(),
+#         axis.title = element_text(size = 20),
+#         axis.text = element_text(size = 14),
+#         strip.text = element_text(size = 14),
+#         legend.text = element_text(size = 16),
+#         legend.title = element_text(size = 18))
+```
+
 
